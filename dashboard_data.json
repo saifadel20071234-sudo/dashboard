@@ -1,0 +1,73 @@
+{
+  "live": {
+    "day": 3,
+    "sim_time": "10:35",
+    "generation_w": 4.72,
+    "forecast_w": 5.10,
+    "consumption_w": 2.00,
+    "self_sufficiency_pct": 78.5,
+    "storage_soc_pct": 65.3,
+    "cumulative_gen_wh": 12.4350,
+    "cumulative_con_wh": 8.2100,
+    "footfall": 28.0,
+    "occupancy": true,
+    "power_source": "harvested",
+    "loads": {
+      "sensors_gateway": {
+        "name": "حساسات النظام + بوابة ESP32",
+        "state": "ON (دائم)",
+        "priority": "حرج"
+      },
+      "corridor_led": {
+        "name": "إضاءة LED إرشادية بالممر",
+        "state": "ON (تلقائي)",
+        "priority": "متوسط"
+      },
+      "charging_station": {
+        "name": "محطة شحن USB تجريبية",
+        "state": "Standby",
+        "priority": "منخفض"
+      }
+    },
+    "alerts": [
+      {
+        "level": "warning",
+        "text": "بلاطة #5: تراجع في الأداء (-25%) — يُنصح بالفحص"
+      },
+      {
+        "level": "success",
+        "text": "نافذة فائض طاقة متوقعة الساعة 10:00"
+      },
+      {
+        "level": "info",
+        "text": "وحدة التخزين قاربت على الامتلاء الكامل"
+      }
+    ],
+    "tiles": [
+      { "id": 1,  "efficiency_pct": 100.0, "cumulative_wh": 0.8120, "stepped_on": true },
+      { "id": 2,  "efficiency_pct": 99.5,  "cumulative_wh": 0.7950, "stepped_on": false },
+      { "id": 3,  "efficiency_pct": 100.0, "cumulative_wh": 0.8200, "stepped_on": true },
+      { "id": 4,  "efficiency_pct": 98.2,  "cumulative_wh": 0.7800, "stepped_on": false },
+      { "id": 5,  "efficiency_pct": 72.0,  "cumulative_wh": 0.5100, "stepped_on": false },
+      { "id": 6,  "efficiency_pct": 100.0, "cumulative_wh": 0.8050, "stepped_on": true },
+      { "id": 7,  "efficiency_pct": 99.8,  "cumulative_wh": 0.7900, "stepped_on": false },
+      { "id": 8,  "efficiency_pct": 100.0, "cumulative_wh": 0.8100, "stepped_on": true },
+      { "id": 9,  "efficiency_pct": 97.5,  "cumulative_wh": 0.7700, "stepped_on": false },
+      { "id": 10, "efficiency_pct": 100.0, "cumulative_wh": 0.8150, "stepped_on": true },
+      { "id": 11, "efficiency_pct": 99.0,  "cumulative_wh": 0.7850, "stepped_on": false },
+      { "id": 12, "efficiency_pct": 100.0, "cumulative_wh": 0.8000, "stepped_on": false },
+      { "id": 13, "efficiency_pct": 98.8,  "cumulative_wh": 0.7750, "stepped_on": true },
+      { "id": 14, "efficiency_pct": 100.0, "cumulative_wh": 0.8080, "stepped_on": false },
+      { "id": 15, "efficiency_pct": 99.3,  "cumulative_wh": 0.7920, "stepped_on": false },
+      { "id": 16, "efficiency_pct": 100.0, "cumulative_wh": 0.8200, "stepped_on": true }
+    ]
+  },
+
+  "history": {
+    "t": [7.0, 7.25, 7.5, 7.75, 8.0, 8.25, 8.5, 8.75, 9.0, 9.25, 9.5, 9.75, 10.0, 10.25, 10.5],
+    "gen_wh": [0.0, 0.12, 0.35, 0.60, 1.80, 3.50, 5.20, 6.10, 7.40, 8.30, 9.50, 10.20, 11.00, 11.80, 12.43],
+    "con_wh": [0.0, 0.10, 0.30, 0.55, 1.20, 2.00, 2.90, 3.60, 4.50, 5.30, 6.10, 6.80, 7.40, 7.80, 8.21],
+    "soc_wh": [0.5, 0.52, 0.55, 0.58, 1.10, 1.80, 2.30, 2.50, 2.80, 2.60, 2.40, 2.20, 2.00, 1.95, 1.96],
+    "footfall": [2.0, 3.5, 5.0, 8.0, 35.0, 38.0, 30.0, 15.0, 28.0, 40.0, 32.0, 18.0, 25.0, 30.0, 28.0]
+  }
+}

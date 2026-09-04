@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<title>PowerStep Grid — لوحة التحكم الحية</title>
+<script src="vendor/chart.umd.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+</script>
+<style>
+  @font-face{
+    font-family:'Cairo';
+    src:url('vendor/fonts/Cairo-Regular.ttf');
+    font-weight:400 800;
+  }
+  :root{
+    /* Futuristic Sci-Fi Color Palette */
+    --green: #00ffcc;       
+    --green-dark: #004d40;
+    --blue: #00bfff;
+    --purple: #b026ff;
+    --orange: #ffaa00;
+    --danger: #ff2a2a;
+    
+    --bg: #090e17;          
+    --card: rgba(16, 24, 39, 0.65); 
+    --ink: #e2e8f0;         
+    --muted: #94a3b8;
+    --line: rgba(255, 255, 255, 0.12);
+  }
+  *{box-sizing:border-box;}
+  
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Cairo',sans-serif; direction:rtl;
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center;
+  }
+  .mono{ font-family:'Consolas','Courier New',monospace; }
+
+  header{
+    background:linear-gradient(120deg, rgba(11, 16, 27, 0.8), rgba(0, 77, 64, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 255, 204, 0.2);
+    color:#fff; padding:18px 26px; display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  }
+  header .title{ font-size:1.35rem; font-weight:800; color: var(--green); text-shadow: 0 0 10px rgba(0,255,204,0.4); }
+  header .subtitle{ font-size:.78rem; opacity:.85; margin-top:2px; }
+  header .status{
+    display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.05);
+    padding:7px 16px; border-radius:20px; font-size:.82rem;
+    border: 1px solid var(--line);
+  }
+  header .dot{ width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); }
+  header .sim-time{ font-weight:700; color: #fff; }
+  .nav-links{ display:flex; gap:10px; margin-top:8px; }
+  .nav-links a{
+    color: var(--muted); text-decoration: none; padding: 7px 16px;
+    border-radius: 20px; font-size: .78rem; font-weight: 700;
+    border: 1px solid var(--line); transition: all 0.3s ease;
+  }
+  .nav-links a:hover, .nav-links a.active{
+    color: var(--green); border-color: var(--green);
+    box-shadow: 0 0 10px rgba(0,255,204,0.3);
+  }
+  .btn-export{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 22px; border-radius:12px; font-size:.82rem; font-weight:700;
+    border:none; cursor:pointer; color:#fff;
+    background:linear-gradient(135deg, var(--green-dark), #00796b);
+    border:1px solid var(--green);
+    box-shadow: 0 0 12px rgba(0,255,204,0.2);
+    transition: all 0.3s ease;
+    font-family:'Cairo',sans-serif; text-decoration:none;
+  }
+  .btn-export:hover{
+    box-shadow: 0 0 25px rgba(0,255,204,0.5);
+    transform: translateY(-2px);
+  }
+  @media print {
+    header, .nav-links, .btn-export, footer { display: none !important; }
+    body { background: white !important; color: black !important; }
+    .card { border: 1px solid #ccc !important; background: white !important; box-shadow: none !important; color: black !important; }
+    canvas { max-width: 100% !important; }
+  }
+
+  main{ padding:20px 26px 40px; max-width:1300px; margin:0 auto; }
+
+  .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:18px; }
+  .grid2{ display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:18px; }
+  .grid2b{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+  @media(max-width:900px){ .grid4{grid-template-columns:repeat(2,1fr);} .grid2, .grid2b{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--card); 
+    border:1px solid rgba(255,255,255,0.08); 
+    border-radius:16px; 
+    padding:18px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+  .card:hover {
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
+  }
+  .card h3{ margin:0 0 12px; font-size:.85rem; color:var(--muted); font-weight:700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .gauge-wrap{ display:flex; flex-direction:column; align-items:center; }
+  .gauge{
+    width:120px; height:120px; border-radius:50%; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    background:conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(255,255,255,0.05) 0);
+    transition: background 0.6s ease;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 15px rgba(0,0,0,0.2);
+  }
+  .gauge::before{
+    content:""; position:absolute; width:92px; height:92px; border-radius:50%; background:var(--bg);
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+  }
+  .gauge .val{ position:relative; z-index:1; font-weight:800; font-size:1.25rem; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+  .gauge .val small{ display:block; font-size:.65rem; font-weight:600; color:var(--muted); margin-top:2px; }
+
+  .battery{
+    width:100%; height:34px; background:rgba(0,0,0,0.4); border: 1px solid var(--line); border-radius:8px; overflow:hidden; position:relative;
+  }
+  .battery .fill{
+    height:100%; background:linear-gradient(90deg,var(--blue),#00e5ff); transition:width .6s ease;
+    box-shadow: 0 0 15px var(--blue);
+  }
+  .battery .label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-weight:800; color:#fff; font-size:.85rem; text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+  .source-tag{ margin-top:8px; font-size:.75rem; text-align:center; color:var(--muted); }
+  .source-tag b{ color:var(--green); text-shadow: 0 0 5px rgba(0,255,204,0.4); }
+  .source-tag.grid b{ color:var(--orange); text-shadow: 0 0 5px rgba(255,170,0,0.4); }
+
+  .footfall-strip{
+    display:flex; gap:3px; height:50px; align-items:flex-end; overflow:hidden; border-radius:6px;
+  }
+  .footfall-strip .bar{
+    flex:1; background:var(--green); border-radius:3px 3px 0 0; min-width:2px; transition:height .3s ease, box-shadow .3s ease;
+    opacity:.9;
+  }
+  .footfall-strip .bar:hover { box-shadow: 0 0 10px var(--green); }
+
+  .loads-list .row{
+    display:flex; align-items:center; justify-content:space-between; padding:10px 0;
+    border-bottom:1px dashed var(--line); font-size:.85rem;
+  }
+  .loads-list .row:last-child{ border-bottom:none; }
+  .badge{
+    padding:5px 12px; border-radius:20px; font-size:.72rem; font-weight:700; color:#fff; white-space:nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  }
+  .badge.on{ background:linear-gradient(45deg, var(--green-dark), var(--green)); }
+  .badge.off{ background:rgba(255,255,255,0.1); border: 1px solid var(--line); }
+  .badge.wait{ background:linear-gradient(45deg, #8a4100, var(--orange)); }
+
+  .alerts-list .alert{
+    display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line);
+    font-size:.85rem; line-height:1.5;
+  }
+  .alerts-list .alert:last-child{ border-bottom:none; }
+  .alerts-list .dot{ width:10px; height:10px; border-radius:50%; margin-top:5px; flex-shrink:0; box-shadow: 0 0 8px currentColor; }
+  .dot.warning{ color:var(--orange); background:var(--orange); }
+  .dot.info{ color:var(--blue); background:var(--blue); }
+  .dot.success{ color:var(--green); background:var(--green); }
+  .dot.danger{ color:var(--danger); background:var(--danger); animation: pulse 1.5s infinite; }
+  .alerts-empty{ color:var(--muted); font-size:.85rem; text-align:center; padding:20px 0; }
+
+  /* Heatmap Tiles Grid */
+  .tiles-grid{ 
+    display:grid; grid-template-columns:repeat(8,1fr); gap:12px; 
+    padding: 15px; background: rgba(0,0,0,0.4); 
+    border-radius: 12px; border: 1px solid var(--line);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  }
+  .tile-chip{
+    aspect-ratio:1; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:.9rem; font-weight:800; color:#fff;
+    background: rgba(255,255,255,0.03);
+    border: 2px solid rgba(255,255,255,0.05);
+    transition: all 0.2s ease-out;
+    position: relative;
+    cursor: default;
+  }
+  .tile-chip .eff {
+    font-size: 0.7rem; opacity: 0.6; font-weight: 600; margin-top: 4px; font-family: 'Consolas', monospace;
+  }
+  
+  /* Heatmap Live Interactions */
+  .tile-chip.stepped {
+    background: rgba(0, 255, 204, 0.15);
+    border-color: var(--green);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.4), inset 0 0 10px rgba(0, 255, 204, 0.2);
+    transform: scale(0.95);
+    color: var(--green);
+  }
+  .tile-chip.faulty {
+    background: rgba(255, 42, 42, 0.15);
+    border-color: var(--danger);
+    color: #ffcccc;
+    animation: flash_fault 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes flash_fault {
+    0% { box-shadow: 0 0 5px rgba(255,42,42,0.3); }
+    50% { box-shadow: 0 0 20px rgba(255,42,42,0.8); border-color: #ff5555; }
+    100% { box-shadow: 0 0 5px rgba(255,42,42,0.3); }
+  }
+
+  footer{ text-align:center; color:var(--muted); font-size:.75rem; padding:20px 0 30px; letter-spacing: 0.5px; }
+
+  /* عداد الطاقة الإجمالية */
+  .energy-counter-banner{
+    background: linear-gradient(135deg, rgba(0,255,204,0.08), rgba(0,191,255,0.08));
+    border: 1px solid rgba(0,255,204,0.25);
+    border-radius: 16px; padding: 18px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0 30px rgba(0,255,204,0.1), inset 0 0 20px rgba(0,255,204,0.03);
+    position: relative; overflow: hidden;
+  }
+  .energy-counter-banner::before{
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0,255,204,0.04), transparent);
+    animation: shimmer 3s infinite;
+  }
+  @keyframes shimmer{ 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+  .counter-group{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .counter-item{ text-align:center; }
+  .counter-val{
+    font-family:'Consolas',monospace; font-size:2rem; font-weight:800;
+    text-shadow: 0 0 20px currentColor;
+    transition: all 0.5s ease;
+  }
+  .counter-val.green{ color: var(--green); }
+  .counter-val.blue{ color: var(--blue); }
+  .counter-val.orange{ color: var(--orange); }
+  .counter-label{ font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+  .counter-divider{ width:1px; height:50px; background:var(--line); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">⚡ PowerStep Grid Control</div>
+    <div class="subtitle">Sci-Fi AI Dashboard — محاكاة أرضية المستقبل المتكاملة</div>
+  </div>
+  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+    <div class="status" style="margin-bottom:0; background:rgba(0,0,0,0.5);">
+      <span class="dot"></span>
+      <span>المحاكاة: يوم <span id="dayNum" class="mono">1</span> — الساعة <span id="simTime" class="sim-time mono">--:--</span></span>
+    </div>
+    <div id="realClock" style="font-family:'Consolas', monospace; font-size:1.4rem; color:#00ffcc; text-shadow:0 0 10px rgba(0,255,204,0.5); font-weight:bold; letter-spacing:2px; margin-top:5px;">
+      --:--:--
+    </div>
+  </div>
+</header>
+
+<div style="max-width:1300px; margin:10px auto; padding:0 26px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+  <div class="nav-links">
+    <a href="/" class="active">🏠 لوحة التحكم</a>
+    <a href="/analytics.html">📊 التحليلات</a>
+    <a href="/compare.html">⚡ مقارنة Before/After</a>
+    <a href="/about_ai.html">🤖 عن الذكاء الاصطناعي</a>
+    <a href="http://localhost:8000/docs" target="_blank" style="background: rgba(0, 204, 255, 0.2); border-color: #00ccff; color: #00ccff;">💻 API</a>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a class="btn-export" href="http://localhost:8000/api/export/csv" target="_blank">📥 CSV</a>
+    <button class="btn-export" onclick="window.print()" style="background:linear-gradient(135deg,#6b21a8,#9333ea); border-color:#b026ff; box-shadow:0 0 12px rgba(176,38,255,0.3);">📄 PDF</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- عداد الطاقة الإجمالية المُولَّدة -->
+  <div class="energy-counter-banner">
+    <div style="z-index:1;">
+      <div style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">⚡ إجمالي ما ولّده النظام منذ بدء التشغيل</div>
+      <div style="font-size:.72rem; color:var(--muted); opacity:.7;">يتحدث كل ثانية — مباشر من نواة المحاكي</div>
+    </div>
+    <div class="counter-group" style="z-index:1;">
+      <div class="counter-item">
+        <div class="counter-val green" id="totalGenWh">0.0000</div>
+        <div class="counter-label">واط·ساعة مُولَّدة (Wh)</div>
+      </div>
+      <div class="counter-divider"></div>
+      <div class="counter-item">
+        <div class="counter-val blue" id="totalConWh">0.0000</div>
+        <div class="counter-label">واط·ساعة مُستهلَكة (Wh)</div>
+      </div>
+      <div class="counter-divider"></div>
+      <div class="counter-item">
+        <div class="counter-val orange" id="totalSavedCO2">0.00</div>
+        <div class="counter-label">جرام CO₂ تم توفيره 🌱</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid4">
+    <div class="card gauge-wrap">
+      <h3>التوليد اللحظي</h3>
+      <div class="gauge" id="gaugeGen" style="--ring-color:var(--green); --pct:0;">
+        <div class="val"><span id="genVal">0.0</span><small>واط</small></div>
+      </div>
+      <div style="margin-top: 15px; text-align: center; font-size: 0.85rem; color: var(--green); text-shadow: 0 0 5px rgba(0,255,204,0.4);">
+        🔮 الـ AI يتوقع: <b id="forecastVal">0.0</b> واط
+        <div style="margin-top:5px; font-size:0.75rem; color:#00ccff; text-shadow:none; padding:4px; background:rgba(0,204,255,0.1); border-radius:4px; border:1px solid rgba(0,204,255,0.3);">
+          🌍 منعنا انبعاث <b id="co2SavedVal">0.0</b> جم CO₂
+        </div>
+      </div>
+    </div>
+    <div class="card gauge-wrap">
+      <h3>الاستهلاك اللحظي</h3>
+      <div class="gauge" id="gaugeCon" style="--ring-color:var(--orange); --pct:0;">
+        <div class="val"><span id="conVal">0.0</span><small>واط</small></div>
+      </div>
+    </div>
+    <div class="card gauge-wrap">
+      <h3>الاكتفاء الذاتي</h3>
+      <div class="gauge" id="gaugeSelf" style="--ring-color:var(--purple); --pct:0;">
+        <div class="val"><span id="selfVal">0</span><small>%</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>طاقة التخزين (Battery SOC)</h3>
+      <div class="battery">
+        <div class="fill" id="battFill" style="width:0%"></div>
+        <div class="label"><span id="battVal">0</span>%</div>
+      </div>
+      <div class="source-tag" id="sourceTag">مصدر التغذية: <b id="sourceLabel">—</b></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>تحليل الطاقة (توليد / استهلاك) Wh</h3>
+      <canvas id="energyChart" height="110"></canvas>
+    </div>
+    <div class="card">
+      <h3>معدل الحركة (خطوة/دقيقة)</h3>
+      <div class="footfall-strip" id="footfallStrip"></div>
+      <div style="margin-top:15px; text-align:center;">
+        <span class="mono" style="font-size:1.8rem; font-weight:800; color:var(--green); text-shadow: 0 0 10px rgba(0,255,204,0.5);" id="footfallNow">0</span>
+        <div style="font-size:.75rem; color:var(--muted); text-transform: uppercase;">Live Footfall</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2b">
+    <div class="card">
+      <h3>توزيع الأحمال الذكي (Smart Relays)</h3>
+      <div class="loads-list" id="loadsList"></div>
+    </div>
+    <div class="card">
+      <h3>نظام رصد الأعطال (AI Alerts)</h3>
+      <div class="alerts-list" id="alertsList"><div class="alerts-empty">النظام مستقر — لا توجد شذوذ (Anomalies)</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="display:flex; justify-content:space-between; align-items:center;">
+      <span>خريطة البلاط الحرارية (Live Heatmap)</span>
+      <span style="font-size: 0.7rem; font-weight: normal; color: var(--green); text-shadow: 0 0 5px var(--green);">يضيء عند الحركة الفعّالة</span>
+    </h3>
+    <div class="tiles-grid" id="tilesGrid"></div>
+  </div>
+
+</main>
+
+<footer>POWERSTEP GRID © 2026 · AI-Powered Floor Simulation · SECURE CONNECTION</footer>
+
+<script>
+const API = window.location.origin;
+
+let chart;
+function initChart(){
+  const ctx = document.getElementById('energyChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label:'مولَّدة (Gen)', data:[], borderColor:'#00ffcc', backgroundColor:'rgba(0,255,204,.15)', fill:true, tension:.4, pointRadius:0, borderWidth:2 },
+        { label:'مستهلَكة (Con)', data:[], borderColor:'#ffaa00', backgroundColor:'rgba(255,170,0,.1)', fill:true, tension:.4, pointRadius:0, borderWidth:2, borderDash:[5,3] },
+      ]
+    },
+    options: {
+      responsive:true,
+      animation:false,
+      plugins:{ legend:{ position:'top', rtl:true, labels:{ font:{family:'Cairo', size:11}, color:'#e2e8f0' } } },
+      scales:{
+        x:{ ticks:{ font:{family:'Consolas', size:10}, color:'#94a3b8', maxTicksLimit:8 }, grid:{color:'rgba(255,255,255,0.05)'} },
+        y:{ ticks:{ font:{family:'Consolas', size:10}, color:'#94a3b8' }, grid:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
+  });
+}
+
+function setGauge(id, pct, valEl, val){
+  document.getElementById(id).style.setProperty('--pct', Math.min(pct,100));
+  document.getElementById(valEl).textContent = val;
+}
+
+function loadBadgeClass(state){
+  if(state.startsWith('ON')) return 'on';
+  if(state.startsWith('Standby')) return 'wait';
+  return 'off';
+}
+
+function updateLive(d) {
+  try{
+
+    document.getElementById('dayNum').textContent = d.day;
+    document.getElementById('simTime').textContent = d.sim_time;
+
+    setGauge('gaugeGen', d.generation_w * 10, 'genVal', d.generation_w.toFixed(1));
+    if (d.forecast_w !== undefined) {
+      document.getElementById('forecastVal').textContent = d.forecast_w.toFixed(1);
+    }
+    
+    // حساب انبعاثات الكربون التي تم توفيرها (تقريباً 0.4 جرام لكل وات ساعة)
+    if (d.cumulative_gen_wh !== undefined) {
+      const co2Grams = d.cumulative_gen_wh * 0.4;
+      document.getElementById('co2SavedVal').textContent = co2Grams.toFixed(2);
+
+      // عداد الطاقة الإجمالية في البانر العلوي
+      document.getElementById('totalGenWh').textContent = d.cumulative_gen_wh.toFixed(4);
+      document.getElementById('totalSavedCO2').textContent = co2Grams.toFixed(2);
+    }
+    if (d.cumulative_con_wh !== undefined) {
+      document.getElementById('totalConWh').textContent = d.cumulative_con_wh.toFixed(4);
+    }
+    
+    setGauge('gaugeCon', d.consumption_w * 10, 'conVal', d.consumption_w.toFixed(1));
+    setGauge('gaugeSelf', d.self_sufficiency_pct, 'selfVal', Math.round(d.self_sufficiency_pct));
+
+    document.getElementById('battFill').style.width = d.storage_soc_pct + '%';
+    document.getElementById('battVal').textContent = Math.round(d.storage_soc_pct);
+
+    const sourceTag = document.getElementById('sourceTag');
+    const sourceLabel = document.getElementById('sourceLabel');
+    if(d.power_source === 'harvested'){
+      sourceTag.classList.remove('grid');
+      sourceLabel.textContent = 'طاقة نظيفة (Harvested)';
+    } else {
+      sourceTag.classList.add('grid');
+      sourceLabel.textContent = 'شبكة الطوارئ (Grid)';
+    }
+
+    document.getElementById('footfallNow').textContent = Math.round(d.footfall);
+
+    // الأحمال
+    const loadsList = document.getElementById('loadsList');
+    loadsList.innerHTML = '';
+    Object.values(d.loads).forEach(l=>{
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `<span>${l.name}</span><span class="badge ${loadBadgeClass(l.state)}">${l.state}</span>`;
+      loadsList.appendChild(row);
+    });
+
+    // التنبيهات
+    const alertsList = document.getElementById('alertsList');
+    if(d.alerts.length === 0){
+      alertsList.innerHTML = '<div class="alerts-empty">النظام مستقر — لا توجد شذوذ (Anomalies)</div>';
+      window.lastAlertCount = 0;
+    } else {
+      alertsList.innerHTML = '';
+      d.alerts.forEach(a=>{
+        const row = document.createElement('div');
+        row.className = 'alert';
+        row.innerHTML = `<span class="dot ${a.level}"></span><span>${a.text}</span>`;
+        alertsList.appendChild(row);
+      });
+      // Play sound if new alerts appeared
+      if (window.lastAlertCount === undefined) window.lastAlertCount = 0;
+      if (d.alerts.length > window.lastAlertCount) {
+        playAlertSound();
+      }
+      window.lastAlertCount = d.alerts.length;
+    }
+
+    // صحة البلاط (Live Heatmap)
+    const tilesGrid = document.getElementById('tilesGrid');
+    tilesGrid.innerHTML = '';
+    d.tiles.forEach(t=>{
+      const chip = document.createElement('div');
+      chip.className = 'tile-chip';
+      
+      // تفاعل حيوي بناءً على متغير stepped_on من السيرفر
+      if (t.stepped_on) {
+        chip.classList.add('stepped');
+      }
+      
+      // كشف الأعطال
+      if (t.efficiency_pct < 80) {
+        chip.classList.add('faulty');
+      }
+      
+      chip.innerHTML = `<span>Tile ${t.id}</span><span class="eff">${Math.round(t.efficiency_pct)}%</span>`;
+      tilesGrid.appendChild(chip);
+    });
+
+  }catch(e){
+    console.error("Connection error:", e);
+  }
+}
+
+async function refreshHistory(){
+  try{
+    const r = await fetch(API + "/api/history");
+    const d = await r.json();
+    if(!chart) return;
+    chart.data.labels = d.t.map(h=>{
+      const hh = Math.floor(h); const mm = Math.round((h-hh)*60);
+      return `${hh}:${mm.toString().padStart(2,'0')}`;
+    });
+    chart.data.datasets[0].data = d.gen_wh;
+    chart.data.datasets[1].data = d.con_wh;
+    chart.update();
+
+    const strip = document.getElementById('footfallStrip');
+    strip.innerHTML = '';
+    const recent = d.footfall.slice(-40);
+    const max = Math.max(...recent, 1);
+    recent.forEach(v=>{
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = Math.max(4, (v/max)*50) + 'px';
+      strip.appendChild(bar);
+    });
+  }catch(e){ /* silent */ }
+}
+
+// ----------------------------------------------------
+// مؤثرات صوتية وساعة حقيقية (Wow Factor)
+// ----------------------------------------------------
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+function playClickSound() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.05);
+}
+
+function playAlertSound() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
+}
+
+// تحديث الساعة الحقيقية
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('realClock').textContent = now.toLocaleTimeString('en-US', {hour12: false});
+}, 1000);
+
+// إضافة صوت عند مرور الماوس
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', playClickSound);
+  });
+});
+
+function initWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + window.location.host + '/ws/live';
+  const ws = new WebSocket(wsUrl);
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    updateLive(data);
+  };
+  
+  ws.onclose = () => {
+    console.log("WebSocket disconnected. Retrying in 2 seconds...");
+    setTimeout(initWebSocket, 2000);
+  };
+}
+
+initChart();
+initWebSocket();
+refreshHistory();
+setInterval(refreshHistory, 4000);
+</script>
+
+</body>
+</html>
