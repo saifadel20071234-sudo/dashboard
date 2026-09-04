@@ -366,36 +366,6 @@ function initWebSocket() {
   };
 }
 
-// ------------------------------------------------------------
-// Initialize
-// ------------------------------------------------------------
-if (MOCK_MODE) {
-  console.log("Running in MOCK_MODE");
-  setConnStatus(true);
-  initChart();
-  
-  // Start with some history and footfall
-  const mockHist = generateMockHistory();
-  chart.data.labels = mockHist.labels;
-  chart.data.datasets[0].data = mockHist.gen;
-  chart.data.datasets[1].data = mockHist.con;
-  chart.update();
-  
-  const strip = document.getElementById('footfallStrip');
-  mockHist.foot.forEach(v => {
-    const bar = document.createElement('div');
-    bar.className = 'bar';
-    bar.style.height = Math.max(4, (v / 45) * 50) + 'px';
-    strip.appendChild(bar);
-  });
-  
-  setInterval(generateAndDispatchMockData, 1500);
-} else {
-  initChart();
-  initWebSocket();
-  refreshHistory();
-  setInterval(refreshHistory, 4000);
-}
 
 // ------------------------------------------------------------
 // Mock Data Generator
@@ -507,6 +477,7 @@ function initMockHistory() {
 initChart();
 
 if (MOCK_MODE) {
+  setConnStatus(true);
   initMockHistory();
   setInterval(generateMockData, 1500);
 } else {
