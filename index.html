@@ -41,12 +41,17 @@
   });
 </script>
 
+<div id="toastContainer" class="toast-container"></div>
+
 <header>
   <div>
     <div class="title">⚡ PowerStep Grid Control</div>
     <div class="subtitle">Sci-Fi AI Dashboard — محاكاة أرضية المستقبل المتكاملة</div>
   </div>
   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+    <div id="connectionBadge" class="conn-badge online">
+      <span class="conn-dot"></span> <span id="connText">SYSTEM ONLINE</span>
+    </div>
     <div class="status" style="margin-bottom:0; background:rgba(0,0,0,0.5);">
       <span class="dot"></span>
       <span>المحاكاة: يوم <span id="dayNum" class="mono">1</span> — الساعة <span id="simTime" class="sim-time mono">--:--</span></span>

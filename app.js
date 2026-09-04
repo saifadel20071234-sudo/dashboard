@@ -145,10 +145,13 @@ function updateLive(d) {
           row.innerHTML = `<span class="dot ${a.level}"></span><span>${a.text}</span>`;
           alertsList.appendChild(row);
         });
-        // Play sound if new alerts appeared
+        
+        // Play sound and show toast if new alerts appeared
         if (window.lastAlertCount === undefined) window.lastAlertCount = 0;
         if (d.alerts.length > window.lastAlertCount) {
           playAlertSound();
+          const newAlerts = d.alerts.slice(window.lastAlertCount);
+          newAlerts.forEach(a => showToast(a.text, a.level));
         }
         window.lastAlertCount = d.alerts.length;
       }
@@ -304,6 +307,42 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ------------------------------------------------------------
+// Connection & Toasts Status Helpers
+// ------------------------------------------------------------
+function setConnStatus(online) {
+  const badge = document.getElementById('connectionBadge');
+  const text = document.getElementById('connText');
+  if(!badge || !text) return;
+  if(online) {
+    badge.className = 'conn-badge online';
+    text.textContent = 'SYSTEM ONLINE';
+  } else {
+    badge.className = 'conn-badge offline';
+    text.textContent = 'CONNECTION LOST';
+  }
+}
+
+function showToast(message, level) {
+  const container = document.getElementById('toastContainer');
+  if(!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast-msg ${level}`;
+  
+  // Icon based on level
+  let icon = '⚠️';
+  if (level === 'danger') icon = '🚨';
+  if (level === 'info') icon = 'ℹ️';
+  
+  toast.innerHTML = `<span style="font-size:1.2rem;">${icon}</span> <span>${message}</span>`;
+  container.appendChild(toast);
+  
+  // Remove after 5 seconds (matches the CSS animation)
+  setTimeout(() => {
+    if(toast.parentElement) toast.remove();
+  }, 5000);
+}
+
+// ------------------------------------------------------------
 // WebSocket Connection
 // ------------------------------------------------------------
 function initWebSocket() {
@@ -311,15 +350,51 @@ function initWebSocket() {
   const wsUrl = protocol + '//' + window.location.host + '/ws/live';
   const ws = new WebSocket(wsUrl);
 
+  ws.onopen = () => {
+    setConnStatus(true);
+  };
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     updateLive(data);
   };
 
   ws.onclose = () => {
+    setConnStatus(false);
     console.log("WebSocket disconnected. Retrying in 2 seconds...");
     setTimeout(initWebSocket, 2000);
   };
+}
+
+// ------------------------------------------------------------
+// Initialize
+// ------------------------------------------------------------
+if (MOCK_MODE) {
+  console.log("Running in MOCK_MODE");
+  setConnStatus(true);
+  initChart();
+  
+  // Start with some history and footfall
+  const mockHist = generateMockHistory();
+  chart.data.labels = mockHist.labels;
+  chart.data.datasets[0].data = mockHist.gen;
+  chart.data.datasets[1].data = mockHist.con;
+  chart.update();
+  
+  const strip = document.getElementById('footfallStrip');
+  mockHist.foot.forEach(v => {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = Math.max(4, (v / 45) * 50) + 'px';
+    strip.appendChild(bar);
+  });
+  
+  setInterval(generateAndDispatchMockData, 1500);
+} else {
+  initChart();
+  initWebSocket();
+  refreshHistory();
+  setInterval(refreshHistory, 4000);
 }
 
 // ------------------------------------------------------------

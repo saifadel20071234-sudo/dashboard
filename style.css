@@ -381,3 +381,51 @@ footer{ text-align:center; color:var(--muted); font-size:.75rem; padding:20px 0 
   .gauge::before { width: 68px; height: 68px; }
   .gauge .val { font-size: 1rem; }
 }
+
+/* ============================================================
+   NEW: Connection Status Badge
+   ============================================================ */
+.conn-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;
+  background: rgba(0,0,0,0.5); border: 1px solid;
+  transition: all 0.3s ease;
+}
+.conn-badge.online { color: #00ffcc; border-color: rgba(0,255,204,0.3); box-shadow: 0 0 10px rgba(0,255,204,0.1); }
+.conn-badge.offline { color: #ff2a2a; border-color: rgba(255,42,42,0.5); box-shadow: 0 0 15px rgba(255,42,42,0.3); }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; }
+.conn-badge.online .conn-dot { background: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-green 2s infinite; }
+.conn-badge.offline .conn-dot { background: #ff2a2a; box-shadow: 0 0 8px #ff2a2a; animation: pulse-red 1s infinite; }
+@keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+@keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+
+/* ============================================================
+   NEW: Toast Notifications
+   ============================================================ */
+.toast-container {
+  position: fixed; bottom: 30px; left: 30px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 12px;
+  pointer-events: none;
+}
+.toast-msg {
+  background: rgba(16, 24, 39, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--danger);
+  border-right: 4px solid var(--danger);
+  color: #fff; padding: 14px 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,42,42,0.2);
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.85rem; font-weight: 700;
+  animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOutToast 0.5s 4.5s forwards;
+}
+.toast-msg.warning { border-color: var(--orange); border-right-color: var(--orange); box-shadow: 0 5px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,170,0,0.2); }
+@keyframes slideInLeft {
+  0% { transform: translateX(-100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOutToast {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-20px); opacity: 0; }
+}
