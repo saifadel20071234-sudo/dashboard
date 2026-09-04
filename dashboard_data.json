@@ -69,5 +69,30 @@
     "con_wh": [0.0, 0.10, 0.30, 0.55, 1.20, 2.00, 2.90, 3.60, 4.50, 5.30, 6.10, 6.80, 7.40, 7.80, 8.21],
     "soc_wh": [0.5, 0.52, 0.55, 0.58, 1.10, 1.80, 2.30, 2.50, 2.80, 2.60, 2.40, 2.20, 2.00, 1.95, 1.96],
     "footfall": [2.0, 3.5, 5.0, 8.0, 35.0, 38.0, 30.0, 15.0, 28.0, 40.0, 32.0, 18.0, 25.0, 30.0, 28.0]
+  },
+
+  "analytics": {
+    "total_records": 4820,
+    "peak_generation_wh": 12.44,
+    "peak_consumption_wh": 8.21,
+    "avg_battery_soc_wh": 1.85,
+    "avg_footfall": 22.3,
+    "recent_data": [
+      { "sim_hour": 7.0,  "gen_wh": 0.00,  "con_wh": 0.00,  "soc_wh": 0.50, "footfall": 2.0  },
+      { "sim_hour": 7.25, "gen_wh": 0.12,  "con_wh": 0.10,  "soc_wh": 0.52, "footfall": 3.5  },
+      { "sim_hour": 7.5,  "gen_wh": 0.35,  "con_wh": 0.30,  "soc_wh": 0.55, "footfall": 5.0  },
+      { "sim_hour": 7.75, "gen_wh": 0.60,  "con_wh": 0.55,  "soc_wh": 0.58, "footfall": 8.0  },
+      { "sim_hour": 8.0,  "gen_wh": 1.80,  "con_wh": 1.20,  "soc_wh": 1.10, "footfall": 35.0 },
+      { "sim_hour": 8.25, "gen_wh": 3.50,  "con_wh": 2.00,  "soc_wh": 1.80, "footfall": 38.0 },
+      { "sim_hour": 8.5,  "gen_wh": 5.20,  "con_wh": 2.90,  "soc_wh": 2.30, "footfall": 30.0 },
+      { "sim_hour": 8.75, "gen_wh": 6.10,  "con_wh": 3.60,  "soc_wh": 2.50, "footfall": 15.0 },
+      { "sim_hour": 9.0,  "gen_wh": 7.40,  "con_wh": 4.50,  "soc_wh": 2.80, "footfall": 28.0 },
+      { "sim_hour": 9.25, "gen_wh": 8.30,  "con_wh": 5.30,  "soc_wh": 2.60, "footfall": 40.0 },
+      { "sim_hour": 9.5,  "gen_wh": 9.50,  "con_wh": 6.10,  "soc_wh": 2.40, "footfall": 32.0 },
+      { "sim_hour": 9.75, "gen_wh": 10.20, "con_wh": 6.80,  "soc_wh": 2.20, "footfall": 18.0 },
+      { "sim_hour": 10.0, "gen_wh": 11.00, "con_wh": 7.40,  "soc_wh": 2.00, "footfall": 25.0 },
+      { "sim_hour": 10.25,"gen_wh": 11.80, "con_wh": 7.80,  "soc_wh": 1.95, "footfall": 30.0 },
+      { "sim_hour": 10.5, "gen_wh": 12.43, "con_wh": 8.21,  "soc_wh": 1.96, "footfall": 28.0 }
+    ]
   }
 }

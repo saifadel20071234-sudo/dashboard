@@ -227,7 +227,13 @@ async function refreshAnalytics(){
   try{
     const r = await fetch(API + "/api/analytics/summary");
     const d = await r.json();
+    populateAnalytics(d);
+  }catch(e){
+    console.log("Backend unavailable — Using preview mode");
+  }
+}
 
+function populateAnalytics(d) {
     document.getElementById('totalRecords').textContent = d.total_records.toLocaleString();
     document.getElementById('peakGen').textContent = d.peak_generation_wh.toFixed(2);
     document.getElementById('peakCon').textContent = d.peak_consumption_wh.toFixed(2);
@@ -252,8 +258,18 @@ async function refreshAnalytics(){
       footChart.data.datasets[0].data = d.recent_data.map(r => r.footfall);
       footChart.update();
     }
-  }catch(e){
-    console.error("Analytics error:", e);
+}
+
+async function loadPreviewAnalytics() {
+  try {
+    const r = await fetch('dashboard_data.json');
+    const data = await r.json();
+    if (data.analytics) {
+      populateAnalytics(data.analytics);
+      console.log("Analytics preview data loaded from dashboard_data.json");
+    }
+  } catch (e) {
+    console.log("No preview analytics data found");
   }
 }
 
@@ -262,8 +278,8 @@ function downloadCSV(){
 }
 
 initCharts();
+loadPreviewAnalytics();
 refreshAnalytics();
-// تحديث كل 10 ثواني
 setInterval(refreshAnalytics, 10000);
 </script>
 
