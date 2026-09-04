@@ -2,6 +2,7 @@
 // PowerStep Grid — Dashboard JavaScript
 // ============================================================
 
+const MOCK_MODE = true; // 1. MOCK DATA GENERATOR FLAG
 const API = window.location.origin;
 
 // ------------------------------------------------------------
@@ -36,8 +37,10 @@ function initChart() {
 // Gauge Helper
 // ------------------------------------------------------------
 function setGauge(id, pct, valEl, val) {
-  document.getElementById(id).style.setProperty('--pct', Math.min(pct, 100));
-  document.getElementById(valEl).textContent = val;
+  const gauge = document.getElementById(id);
+  const valueElement = document.getElementById(valEl);
+  if (gauge) gauge.style.setProperty('--pct', Math.min(pct, 100));
+  if (valueElement) valueElement.textContent = val;
 }
 
 // ------------------------------------------------------------
@@ -50,102 +53,158 @@ function loadBadgeClass(state) {
 }
 
 // ------------------------------------------------------------
-// Update Live Data (called on each WebSocket message)
+// Update Live Data (called on each WebSocket message or by mock)
 // ------------------------------------------------------------
 function updateLive(d) {
   try {
     // Day & Time
-    document.getElementById('dayNum').textContent = d.day;
-    document.getElementById('simTime').textContent = d.sim_time;
+    if (document.getElementById('dayNum')) document.getElementById('dayNum').textContent = d.day;
+    if (document.getElementById('simTime')) document.getElementById('simTime').textContent = d.sim_time;
 
     // Gauges
-    setGauge('gaugeGen', d.generation_w * 10, 'genVal', d.generation_w.toFixed(1));
-    if (d.forecast_w !== undefined) {
+    if (d.generation_w !== undefined) {
+      setGauge('gaugeGen', d.generation_w * 10, 'genVal', d.generation_w.toFixed(1));
+    }
+    if (d.forecast_w !== undefined && document.getElementById('forecastVal')) {
       document.getElementById('forecastVal').textContent = d.forecast_w.toFixed(1);
     }
 
-    // CO2 Savings
-    if (d.cumulative_gen_wh !== undefined) {
+    // CO2 Savings & Generated Wh
+    if (d.co2_saved_grams !== undefined) {
+      if (document.getElementById('co2SavedVal')) document.getElementById('co2SavedVal').textContent = d.co2_saved_grams.toFixed(2);
+      if (document.getElementById('totalSavedCO2')) document.getElementById('totalSavedCO2').textContent = d.co2_saved_grams.toFixed(2);
+    } else if (d.cumulative_gen_wh !== undefined) {
       const co2Grams = d.cumulative_gen_wh * 0.4;
-      document.getElementById('co2SavedVal').textContent = co2Grams.toFixed(2);
-
-      // Energy counter banner
-      document.getElementById('totalGenWh').textContent = d.cumulative_gen_wh.toFixed(4);
-      document.getElementById('totalSavedCO2').textContent = co2Grams.toFixed(2);
+      if (document.getElementById('co2SavedVal')) document.getElementById('co2SavedVal').textContent = co2Grams.toFixed(2);
+      if (document.getElementById('totalSavedCO2')) document.getElementById('totalSavedCO2').textContent = co2Grams.toFixed(2);
     }
-    if (d.cumulative_con_wh !== undefined) {
+
+    if (d.cumulative_gen_wh !== undefined && document.getElementById('totalGenWh')) {
+      document.getElementById('totalGenWh').textContent = d.cumulative_gen_wh.toFixed(4);
+    }
+    if (d.cumulative_con_wh !== undefined && document.getElementById('totalConWh')) {
       document.getElementById('totalConWh').textContent = d.cumulative_con_wh.toFixed(4);
     }
 
-    setGauge('gaugeCon', d.consumption_w * 10, 'conVal', d.consumption_w.toFixed(1));
-    setGauge('gaugeSelf', d.self_sufficiency_pct, 'selfVal', Math.round(d.self_sufficiency_pct));
+    if (d.consumption_w !== undefined) {
+      setGauge('gaugeCon', d.consumption_w * 10, 'conVal', d.consumption_w.toFixed(1));
+    }
+    if (d.self_sufficiency_pct !== undefined) {
+      setGauge('gaugeSelf', d.self_sufficiency_pct, 'selfVal', Math.round(d.self_sufficiency_pct));
+    }
 
     // Battery
-    document.getElementById('battFill').style.width = d.storage_soc_pct + '%';
-    document.getElementById('battVal').textContent = Math.round(d.storage_soc_pct);
+    if (d.storage_soc_pct !== undefined) {
+      const battFill = document.getElementById('battFill');
+      const battVal = document.getElementById('battVal');
+      if (battFill) battFill.style.width = d.storage_soc_pct + '%';
+      if (battVal) battVal.textContent = Math.round(d.storage_soc_pct);
+    }
 
     // Power Source
     const sourceTag = document.getElementById('sourceTag');
     const sourceLabel = document.getElementById('sourceLabel');
-    if (d.power_source === 'harvested') {
-      sourceTag.classList.remove('grid');
-      sourceLabel.textContent = 'طاقة نظيفة (Harvested)';
-    } else {
-      sourceTag.classList.add('grid');
-      sourceLabel.textContent = 'شبكة الطوارئ (Grid)';
+    if (sourceTag && sourceLabel && d.power_source) {
+      if (d.power_source === 'harvested') {
+        sourceTag.classList.remove('grid');
+        sourceLabel.textContent = 'طاقة نظيفة (Harvested)';
+      } else {
+        sourceTag.classList.add('grid');
+        sourceLabel.textContent = 'شبكة الطوارئ (Grid)';
+      }
     }
 
     // Footfall
-    document.getElementById('footfallNow').textContent = Math.round(d.footfall);
+    if (d.footfall !== undefined && document.getElementById('footfallNow')) {
+      document.getElementById('footfallNow').textContent = Math.round(d.footfall);
+    }
 
     // Loads
     const loadsList = document.getElementById('loadsList');
-    loadsList.innerHTML = '';
-    Object.values(d.loads).forEach(l => {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = `<span>${l.name}</span><span class="badge ${loadBadgeClass(l.state)}">${l.state}</span>`;
-      loadsList.appendChild(row);
-    });
+    if (loadsList && d.loads) {
+      loadsList.innerHTML = '';
+      Object.values(d.loads).forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `<span>${l.name}</span><span class="badge ${loadBadgeClass(l.state)}">${l.state}</span>`;
+        loadsList.appendChild(row);
+      });
+    }
 
     // Alerts
     const alertsList = document.getElementById('alertsList');
-    if (d.alerts.length === 0) {
-      alertsList.innerHTML = '<div class="alerts-empty">النظام مستقر — لا توجد شذوذ (Anomalies)</div>';
-      window.lastAlertCount = 0;
-    } else {
-      alertsList.innerHTML = '';
-      d.alerts.forEach(a => {
-        const row = document.createElement('div');
-        row.className = 'alert';
-        row.innerHTML = `<span class="dot ${a.level}"></span><span>${a.text}</span>`;
-        alertsList.appendChild(row);
-      });
-      // Play sound if new alerts appeared
-      if (window.lastAlertCount === undefined) window.lastAlertCount = 0;
-      if (d.alerts.length > window.lastAlertCount) {
-        playAlertSound();
+    if (alertsList && d.alerts) {
+      if (d.alerts.length === 0) {
+        alertsList.innerHTML = '<div class="alerts-empty">النظام مستقر — لا توجد شذوذ (Anomalies)</div>';
+        window.lastAlertCount = 0;
+      } else {
+        alertsList.innerHTML = '';
+        d.alerts.forEach(a => {
+          const row = document.createElement('div');
+          row.className = 'alert';
+          row.innerHTML = `<span class="dot ${a.level}"></span><span>${a.text}</span>`;
+          alertsList.appendChild(row);
+        });
+        // Play sound if new alerts appeared
+        if (window.lastAlertCount === undefined) window.lastAlertCount = 0;
+        if (d.alerts.length > window.lastAlertCount) {
+          playAlertSound();
+        }
+        window.lastAlertCount = d.alerts.length;
       }
-      window.lastAlertCount = d.alerts.length;
     }
 
     // Tiles Heatmap
     const tilesGrid = document.getElementById('tilesGrid');
-    tilesGrid.innerHTML = '';
-    d.tiles.forEach(t => {
-      const chip = document.createElement('div');
-      chip.className = 'tile-chip';
+    if (tilesGrid && d.tiles) {
+      tilesGrid.innerHTML = '';
+      d.tiles.forEach(t => {
+        const chip = document.createElement('div');
+        chip.className = 'tile-chip';
 
-      if (t.stepped_on) {
-        chip.classList.add('stepped');
-      }
-      if (t.efficiency_pct < 80) {
-        chip.classList.add('faulty');
-      }
+        if (t.stepped_on) {
+          chip.classList.add('stepped');
+        }
+        if (t.efficiency_pct < 80) {
+          chip.classList.add('faulty');
+        }
 
-      chip.innerHTML = `<span>Tile ${t.id}</span><span class="eff">${Math.round(t.efficiency_pct)}%</span>`;
-      tilesGrid.appendChild(chip);
-    });
+        chip.innerHTML = `<span>Tile ${t.id}</span><span class="eff">${Math.round(t.efficiency_pct)}%</span>`;
+        tilesGrid.appendChild(chip);
+      });
+    }
+
+    // NEW FIELDS
+    if (d.voltage_v !== undefined && document.getElementById('voltageVal')) {
+      document.getElementById('voltageVal').textContent = d.voltage_v.toFixed(1);
+    }
+    if (d.current_a !== undefined && document.getElementById('currentVal')) {
+      document.getElementById('currentVal').textContent = d.current_a.toFixed(1);
+    }
+    if (d.system_uptime !== undefined && document.getElementById('uptimeVal')) {
+      document.getElementById('uptimeVal').textContent = d.system_uptime;
+    }
+    if (d.cost_saved !== undefined && document.getElementById('costSavedVal')) {
+      document.getElementById('costSavedVal').textContent = d.cost_saved.toFixed(2);
+    }
+    if (d.exported_wh !== undefined && document.getElementById('exportedWhVal')) {
+      document.getElementById('exportedWhVal').textContent = d.exported_wh.toFixed(1);
+    }
+    if (d.battery_temperature !== undefined && document.getElementById('battTempVal')) {
+      document.getElementById('battTempVal').textContent = d.battery_temperature.toFixed(1);
+    }
+    if (d.ai_status !== undefined) {
+      const fStatus = document.getElementById('aiStatusForecast');
+      if (fStatus) {
+        if (d.ai_status.forecast_model === 'Online') fStatus.classList.remove('offline');
+        else fStatus.classList.add('offline');
+      }
+      const aStatus = document.getElementById('aiStatusAnomaly');
+      if (aStatus) {
+        if (d.ai_status.anomaly_model === 'Online') aStatus.classList.remove('offline');
+        else aStatus.classList.add('offline');
+      }
+    }
 
   } catch (e) {
     console.error("Connection error:", e);
@@ -171,15 +230,17 @@ async function refreshHistory() {
     chart.update();
 
     const strip = document.getElementById('footfallStrip');
-    strip.innerHTML = '';
-    const recent = d.footfall.slice(-40);
-    const max = Math.max(...recent, 1);
-    recent.forEach(v => {
-      const bar = document.createElement('div');
-      bar.className = 'bar';
-      bar.style.height = Math.max(4, (v / max) * 50) + 'px';
-      strip.appendChild(bar);
-    });
+    if (strip) {
+      strip.innerHTML = '';
+      const recent = d.footfall.slice(-40);
+      const max = Math.max(...recent, 1);
+      recent.forEach(v => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(4, (v / max) * 50) + 'px';
+        strip.appendChild(bar);
+      });
+    }
   } catch (e) { /* silent */ }
 }
 
@@ -220,20 +281,26 @@ function playAlertSound() {
 }
 
 // ------------------------------------------------------------
-// Real Clock
+// Real Clock & Loading Screen & Hover Sounds
 // ------------------------------------------------------------
 setInterval(() => {
   const now = new Date();
-  document.getElementById('realClock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+  const realClock = document.getElementById('realClock');
+  if (realClock) realClock.textContent = now.toLocaleTimeString('en-US', { hour12: false });
 }, 1000);
 
-// ------------------------------------------------------------
-// Hover Sound Effects
-// ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a, button').forEach(el => {
     el.addEventListener('mouseenter', playClickSound);
   });
+  
+  // 3. LOADING SCREEN: After DOMContentLoaded, wait 2.5s then add 'hidden'
+  setTimeout(() => {
+    const loader = document.querySelector('.loading-overlay');
+    if (loader) {
+      loader.classList.add('hidden');
+    }
+  }, 2500);
 });
 
 // ------------------------------------------------------------
@@ -256,9 +323,119 @@ function initWebSocket() {
 }
 
 // ------------------------------------------------------------
+// Mock Data Generator
+// ------------------------------------------------------------
+let mockSimTime = 0;
+let mockDay = 1;
+let mockUptime = 3600;
+
+function generateMockData() {
+  mockSimTime += 0.2;
+  if (mockSimTime >= 24) { mockSimTime = 0; mockDay++; }
+  const hour = Math.floor(mockSimTime);
+  const min = Math.floor((mockSimTime - hour) * 60);
+  const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+
+  const noonDist = Math.abs(12 - mockSimTime);
+  const generation_w = Math.max(0, 500 - (noonDist * noonDist * 5)) + Math.random() * 20;
+  const consumption_w = generation_w * (0.4 + Math.random() * 0.2); 
+  const storage_soc_pct = 50 + Math.sin(mockSimTime / 24 * Math.PI) * 30 + Math.random() * 2;
+  const footfall = 5 + Math.random() * 40;
+
+  const tiles = Array.from({length: 16}, (_, i) => ({
+    id: i + 1,
+    stepped_on: Math.random() > 0.8,
+    efficiency_pct: i === 4 ? 72 + Math.random() * 2 : 95 + Math.random() * 4 // Tile 5 low efficiency
+  }));
+
+  const alerts = [];
+  if (Math.random() > 0.9) {
+    alerts.push({ level: 'warning', text: 'Anomaly detected in load pattern.' });
+  }
+
+  mockUptime += 1.5;
+
+  const cumulative_gen_wh = 1234.5 + mockSimTime * 10;
+
+  const data = {
+    day: `اليوم ${mockDay}`,
+    sim_time: timeStr,
+    generation_w,
+    forecast_w: generation_w * 1.1,
+    cumulative_gen_wh,
+    cumulative_con_wh: 800 + mockSimTime * 5,
+    consumption_w,
+    self_sufficiency_pct: Math.min(100, (generation_w / (consumption_w || 1)) * 100),
+    storage_soc_pct,
+    power_source: generation_w > consumption_w ? 'harvested' : 'grid',
+    footfall,
+    loads: {
+      load1: { name: 'Lighting', state: 'ON (Active)' },
+      load2: { name: 'HVAC', state: 'Standby' },
+      load3: { name: 'Servers', state: 'ON (Active)' }
+    },
+    alerts,
+    tiles,
+    voltage_v: 11.5 + Math.random() * 1.3,
+    current_a: 0.5 + Math.random() * 2,
+    system_uptime: Math.floor(mockUptime),
+    ai_status: { forecast_model: 'Online', anomaly_model: 'Online' },
+    cost_saved: cumulative_gen_wh * 0.15,
+    co2_saved_grams: cumulative_gen_wh * 0.4,
+    exported_wh: 100 + mockSimTime * 2,
+    battery_temperature: 28 + Math.random() * 10
+  };
+
+  updateLive(data);
+}
+
+function initMockHistory() {
+  if (!chart) return;
+  const t = [];
+  const gen_wh = [];
+  const con_wh = [];
+  const footfall = [];
+  for (let i = 0; i < 24; i++) {
+    t.push(i);
+    const noonDist = Math.abs(12 - i);
+    const gen = Math.max(0, 500 - (noonDist * noonDist * 5)) + Math.random() * 20;
+    gen_wh.push(gen);
+    con_wh.push(gen * (0.4 + Math.random() * 0.2));
+    footfall.push(5 + Math.random() * 40);
+  }
+  chart.data.labels = t.map(h => {
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return `${hh}:${mm.toString().padStart(2, '0')}`;
+  });
+  chart.data.datasets[0].data = gen_wh;
+  chart.data.datasets[1].data = con_wh;
+  chart.update();
+
+  const strip = document.getElementById('footfallStrip');
+  if (strip) {
+    strip.innerHTML = '';
+    const recent = footfall.slice(-40);
+    const max = Math.max(...recent, 1);
+    recent.forEach(v => {
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = Math.max(4, (v / max) * 50) + 'px';
+      strip.appendChild(bar);
+    });
+  }
+}
+
+// ------------------------------------------------------------
 // Initialize
 // ------------------------------------------------------------
 initChart();
-initWebSocket();
-refreshHistory();
-setInterval(refreshHistory, 4000);
+
+if (MOCK_MODE) {
+  initMockHistory();
+  setInterval(generateMockData, 1500);
+} else {
+  initWebSocket();
+  refreshHistory();
+  setInterval(refreshHistory, 4000);
+}
