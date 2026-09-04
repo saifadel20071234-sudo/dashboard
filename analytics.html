@@ -187,7 +187,6 @@
 
 <script>
 const API = window.location.origin;
-const MOCK_MODE = true; // غيّرها لـ false لما الباك إند يكون جاهز
 
 let energyChart, battChart, footChart;
 
@@ -254,53 +253,7 @@ function populateCharts(d) {
   }
 }
 
-// ------------------------------------------------------------
-// Mock Analytics Data
-// ------------------------------------------------------------
-function generateMockAnalytics() {
-  const hours = [];
-  for (let h = 7; h <= 17.5; h += 0.25) hours.push(h);
-  
-  let cumGen = 0, cumCon = 0;
-  const recent_data = hours.map(h => {
-    // Bell curve generation peaking at noon
-    const genRate = 2.5 * Math.exp(-Math.pow(h - 12, 2) / 8) + 0.1;
-    const conRate = genRate * (0.4 + Math.random() * 0.2);
-    cumGen += genRate * 0.25;
-    cumCon += conRate * 0.25;
-    const soc = Math.max(0.3, Math.min(3.0, 0.5 + (cumGen - cumCon) * 0.3));
-    
-    // Footfall with peaks at class changes
-    let foot = 5;
-    [8, 10, 12, 14, 16].forEach(p => {
-      foot += 40 * Math.exp(-Math.pow(h - p, 2) / 0.15);
-    });
-    foot += Math.random() * 5;
-
-    return {
-      sim_hour: h,
-      gen_wh: parseFloat(cumGen.toFixed(2)),
-      con_wh: parseFloat(cumCon.toFixed(2)),
-      soc_wh: parseFloat(soc.toFixed(2)),
-      footfall: Math.round(foot)
-    };
-  });
-
-  return {
-    total_records: 4820 + Math.floor(Math.random() * 200),
-    peak_generation_wh: parseFloat(cumGen.toFixed(2)),
-    peak_consumption_wh: parseFloat(cumCon.toFixed(2)),
-    avg_footfall: 22.3 + parseFloat((Math.random() * 3).toFixed(1)),
-    recent_data: recent_data
-  };
-}
-
 async function refreshAnalytics(){
-  if (MOCK_MODE) {
-    const mockData = generateMockAnalytics();
-    populateCharts(mockData);
-    return;
-  }
   try{
     const r = await fetch(API + "/api/analytics/summary");
     const d = await r.json();
@@ -311,11 +264,7 @@ async function refreshAnalytics(){
 }
 
 function downloadCSV(){
-  if (MOCK_MODE) {
-    window.open('PowerStep_Report_Sample.csv', '_blank');
-  } else {
-    window.open(API + "/api/export/csv", "_blank");
-  }
+  window.open(API + "/api/export/csv", "_blank");
 }
 
 initCharts();

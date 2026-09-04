@@ -2,7 +2,6 @@
 // PowerStep Grid — Dashboard JavaScript
 // ============================================================
 
-const MOCK_MODE = true; // 1. MOCK DATA GENERATOR FLAG
 const API = window.location.origin;
 
 // ------------------------------------------------------------
@@ -368,120 +367,9 @@ function initWebSocket() {
 
 
 // ------------------------------------------------------------
-// Mock Data Generator
-// ------------------------------------------------------------
-let mockSimTime = 0;
-let mockDay = 1;
-let mockUptime = 3600;
-
-function generateMockData() {
-  mockSimTime += 0.2;
-  if (mockSimTime >= 24) { mockSimTime = 0; mockDay++; }
-  const hour = Math.floor(mockSimTime);
-  const min = Math.floor((mockSimTime - hour) * 60);
-  const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-
-  const noonDist = Math.abs(12 - mockSimTime);
-  const generation_w = Math.max(0, 500 - (noonDist * noonDist * 5)) + Math.random() * 20;
-  const consumption_w = generation_w * (0.4 + Math.random() * 0.2); 
-  const storage_soc_pct = 50 + Math.sin(mockSimTime / 24 * Math.PI) * 30 + Math.random() * 2;
-  const footfall = 5 + Math.random() * 40;
-
-  const tiles = Array.from({length: 16}, (_, i) => ({
-    id: i + 1,
-    stepped_on: Math.random() > 0.8,
-    efficiency_pct: i === 4 ? 72 + Math.random() * 2 : 95 + Math.random() * 4 // Tile 5 low efficiency
-  }));
-
-  const alerts = [];
-  if (Math.random() > 0.9) {
-    alerts.push({ level: 'warning', text: 'Anomaly detected in load pattern.' });
-  }
-
-  mockUptime += 1.5;
-
-  const cumulative_gen_wh = 1234.5 + mockSimTime * 10;
-
-  const data = {
-    day: `اليوم ${mockDay}`,
-    sim_time: timeStr,
-    generation_w,
-    forecast_w: generation_w * 1.1,
-    cumulative_gen_wh,
-    cumulative_con_wh: 800 + mockSimTime * 5,
-    consumption_w,
-    self_sufficiency_pct: Math.min(100, (generation_w / (consumption_w || 1)) * 100),
-    storage_soc_pct,
-    power_source: generation_w > consumption_w ? 'harvested' : 'grid',
-    footfall,
-    loads: {
-      load1: { name: 'Lighting', state: 'ON (Active)' },
-      load2: { name: 'HVAC', state: 'Standby' },
-      load3: { name: 'Servers', state: 'ON (Active)' }
-    },
-    alerts,
-    tiles,
-    voltage_v: 11.5 + Math.random() * 1.3,
-    current_a: 0.5 + Math.random() * 2,
-    system_uptime: Math.floor(mockUptime),
-    ai_status: { forecast_model: 'Online', anomaly_model: 'Online' },
-    cost_saved: cumulative_gen_wh * 0.15,
-    co2_saved_grams: cumulative_gen_wh * 0.4,
-    exported_wh: 100 + mockSimTime * 2,
-    battery_temperature: 28 + Math.random() * 10
-  };
-
-  updateLive(data);
-}
-
-function initMockHistory() {
-  if (!chart) return;
-  const t = [];
-  const gen_wh = [];
-  const con_wh = [];
-  const footfall = [];
-  for (let i = 0; i < 24; i++) {
-    t.push(i);
-    const noonDist = Math.abs(12 - i);
-    const gen = Math.max(0, 500 - (noonDist * noonDist * 5)) + Math.random() * 20;
-    gen_wh.push(gen);
-    con_wh.push(gen * (0.4 + Math.random() * 0.2));
-    footfall.push(5 + Math.random() * 40);
-  }
-  chart.data.labels = t.map(h => {
-    const hh = Math.floor(h);
-    const mm = Math.round((h - hh) * 60);
-    return `${hh}:${mm.toString().padStart(2, '0')}`;
-  });
-  chart.data.datasets[0].data = gen_wh;
-  chart.data.datasets[1].data = con_wh;
-  chart.update();
-
-  const strip = document.getElementById('footfallStrip');
-  if (strip) {
-    strip.innerHTML = '';
-    const recent = footfall.slice(-40);
-    const max = Math.max(...recent, 1);
-    recent.forEach(v => {
-      const bar = document.createElement('div');
-      bar.className = 'bar';
-      bar.style.height = Math.max(4, (v / max) * 50) + 'px';
-      strip.appendChild(bar);
-    });
-  }
-}
-
-// ------------------------------------------------------------
 // Initialize
 // ------------------------------------------------------------
 initChart();
-
-if (MOCK_MODE) {
-  setConnStatus(true);
-  initMockHistory();
-  setInterval(generateMockData, 1500);
-} else {
-  initWebSocket();
-  refreshHistory();
-  setInterval(refreshHistory, 4000);
-}
+initWebSocket();
+refreshHistory();
+setInterval(refreshHistory, 4000);
