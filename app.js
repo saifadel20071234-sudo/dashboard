@@ -239,86 +239,26 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------
 // WebSocket Connection
 // ------------------------------------------------------------
-let isLiveConnected = false;
-
 function initWebSocket() {
-  try {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = protocol + '//' + window.location.host + '/ws/live';
-    const ws = new WebSocket(wsUrl);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + window.location.host + '/ws/live';
+  const ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      isLiveConnected = true;
-      console.log("WebSocket connected — Live mode active");
-    };
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    updateLive(data);
+  };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      updateLive(data);
-    };
-
-    ws.onclose = () => {
-      isLiveConnected = false;
-      console.log("WebSocket disconnected. Retrying in 2 seconds...");
-      setTimeout(initWebSocket, 2000);
-    };
-
-    ws.onerror = () => {
-      console.log("WebSocket unavailable — Using preview mode from dashboard_data.json");
-    };
-  } catch (e) {
-    console.log("WebSocket not available — Preview mode");
-  }
-}
-
-// ------------------------------------------------------------
-// Preview Mode (load from dashboard_data.json)
-// ------------------------------------------------------------
-async function loadPreviewData() {
-  try {
-    const r = await fetch('dashboard_data.json');
-    const data = await r.json();
-
-    // Load live preview data
-    if (data.live) {
-      updateLive(data.live);
-    }
-
-    // Load history into chart
-    if (data.history && chart) {
-      chart.data.labels = data.history.t.map(h => {
-        const hh = Math.floor(h);
-        const mm = Math.round((h - hh) * 60);
-        return `${hh}:${mm.toString().padStart(2, '0')}`;
-      });
-      chart.data.datasets[0].data = data.history.gen_wh;
-      chart.data.datasets[1].data = data.history.con_wh;
-      chart.update();
-
-      // Footfall strip
-      const strip = document.getElementById('footfallStrip');
-      strip.innerHTML = '';
-      const recent = data.history.footfall.slice(-40);
-      const max = Math.max(...recent, 1);
-      recent.forEach(v => {
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.height = Math.max(4, (v / max) * 50) + 'px';
-        strip.appendChild(bar);
-      });
-    }
-
-    console.log("Preview data loaded from dashboard_data.json");
-  } catch (e) {
-    console.log("No preview data found");
-  }
+  ws.onclose = () => {
+    console.log("WebSocket disconnected. Retrying in 2 seconds...");
+    setTimeout(initWebSocket, 2000);
+  };
 }
 
 // ------------------------------------------------------------
 // Initialize
 // ------------------------------------------------------------
 initChart();
-loadPreviewData();
 initWebSocket();
 refreshHistory();
 setInterval(refreshHistory, 4000);
