@@ -1,36 +1,25 @@
-const CACHE_NAME = 'powerstep-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/analytics.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
-];
+const CACHE_NAME = 'powerstep-cache-v2';
 
+// عند التثبيت — امسح أي cache قديم
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
+  self.skipWaiting();
 });
 
+// عند التفعيل — امسح الكاش القديم
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// دايماً جيب النسخة الجديدة من السيرفر (Network First)
 self.addEventListener('fetch', event => {
-  // للبيانات الحية، مش هنستعمل الـ cache
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(fetch(event.request));
-  } else {
-    event.respondWith(
-      caches.match(event.request)
-        .then(response => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request);
-        }
-      )
-    );
-  }
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
 });
