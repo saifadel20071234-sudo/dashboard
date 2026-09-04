@@ -373,3 +373,139 @@ initChart();
 initWebSocket();
 refreshHistory();
 setInterval(refreshHistory, 4000);
+
+// ============================================================
+// DEV MODE: CSV Playback Engine
+// ============================================================
+let playbackData = [];
+let playbackInterval = null;
+
+const fileInput = document.getElementById('csvFileInput');
+if(fileInput) {
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      parseCSVToPlayback(evt.target.result);
+    };
+    reader.readAsText(file);
+  });
+}
+
+function parseCSVToPlayback(csvText) {
+  const lines = csvText.trim().split('\n');
+  playbackData = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    
+    // Split by comma, but ignore commas inside JSON string
+    const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    if (parts.length >= 2) {
+      try {
+        let jsonStr = parts[1].trim();
+        if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+          jsonStr = jsonStr.substring(1, jsonStr.length - 1).replace(/""/g, '"');
+        }
+        playbackData.push({ source: parts[0], data: JSON.parse(jsonStr) });
+      } catch(err) {
+        console.error("Parse error on line", i, err);
+      }
+    }
+  }
+  
+  const btn = document.getElementById('playBtn');
+  if(btn) {
+    btn.textContent = `▶ بدء العرض (${playbackData.length} سجل)`;
+    btn.disabled = false;
+  }
+}
+
+function startPlayback() {
+  if (playbackData.length === 0) return;
+  if (playbackInterval) clearInterval(playbackInterval);
+  
+  setConnStatus(true);
+  let index = 0;
+  let tick = 0;
+  let lastPeople = 0;
+  
+  document.getElementById('playBtn').textContent = "⏹ جاري العرض...";
+  showToast("تم بدء تشغيل محاكي الداتا", "success");
+  
+  playbackInterval = setInterval(() => {
+    if (index >= playbackData.length) {
+      clearInterval(playbackInterval);
+      showToast("تم انتهاء ملف الداتا بالكامل", "info");
+      document.getElementById('playBtn').textContent = "▶ إعادة العرض";
+      index = 0;
+      return;
+    }
+    
+    // Process a chunk of rows (e.g. 15 rows) per second to simulate real-time influx
+    let chunk = playbackData.slice(index, index + 15);
+    index += 15;
+    tick++;
+    
+    let totalWatt = 0;
+    let avgVoltage = 0;
+    let voltageCount = 0;
+    let activeTiles = [];
+    
+    chunk.forEach(row => {
+      if (row.source === 'wifi_occupancy') {
+        lastPeople = row.data.people_count || 0;
+      } else if (row.source === 'Data_Type') {
+        const w = parseFloat(row.data.avg_watt || 0);
+        const v = parseFloat(row.data.voltage || 0);
+        totalWatt += w;
+        if (v > 0) {
+          avgVoltage += v;
+          voltageCount++;
+        }
+        
+        let tId = row.data.tile_id ? parseInt(row.data.tile_id.replace('Tile_','')) : Math.floor(Math.random()*16)+1;
+        activeTiles.push({
+          id: tId,
+          stepped_on: v > 0.05, // Threshold for stepping
+          efficiency_pct: 90 + Math.random() * 8
+        });
+      }
+    });
+    
+    const finalVoltage = voltageCount > 0 ? (avgVoltage / voltageCount) : 0;
+    
+    // Scale up watts for visual dashboard effect (raw is very tiny e.g. 0.02W, scale it to simulate a big grid)
+    const gen_w = totalWatt * 5000; 
+    const con_w = gen_w * 0.4;
+    
+    const payload = {
+      day: "تجريبي (CSV)",
+      sim_time: "00:" + (tick % 60).toString().padStart(2, '0'),
+      generation_w: gen_w,
+      forecast_w: gen_w * 1.1,
+      cumulative_gen_wh: tick * 1.5,
+      cumulative_con_wh: tick * 0.6,
+      consumption_w: con_w,
+      self_sufficiency_pct: 100,
+      storage_soc_pct: 50 + Math.sin(tick/10)*10, // Mocked Battery
+      power_source: 'harvested',
+      footfall: lastPeople * 2, // Scaled up people
+      loads: { l1: { name: 'Lighting', state: 'ON' } }, // Mocked Load
+      alerts: [],
+      tiles: activeTiles.length > 0 ? activeTiles : Array.from({length:16}, (_, i) => ({id: i+1, stepped_on: false, efficiency_pct: 99})),
+      voltage_v: finalVoltage > 0 ? finalVoltage + 11.5 : 12 + Math.random()*0.5,
+      current_a: totalWatt * 50,
+      system_uptime: tick * 5,
+      ai_status: { forecast_model: 'Online', anomaly_model: 'Online' },
+      cost_saved: tick * 0.1,
+      co2_saved_grams: tick * 0.4,
+      exported_wh: 0,
+      battery_temperature: 30
+    };
+    
+    updateLive(payload);
+    
+  }, 1000);
+}

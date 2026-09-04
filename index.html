@@ -75,6 +75,15 @@
 
 <main>
 
+  <!-- Dev Panel (CSV Playback) -->
+  <div style="background: rgba(255,170,0,0.1); border: 1px solid var(--orange); border-radius: 12px; padding: 12px 18px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <b style="color: var(--orange); font-size: 0.9rem;">🧪 أداة فحص الداتا (Dev Playback)</b>
+      <input type="file" id="csvFileInput" accept=".csv" style="color: var(--ink); font-size: 0.8rem; border: 1px solid var(--line); padding: 5px; border-radius: 6px;">
+    </div>
+    <button id="playBtn" class="btn-export" style="background: var(--orange); border-color: #e69500; color: #000; box-shadow: 0 0 15px rgba(255,170,0,0.3);" onclick="startPlayback()" disabled>▶ اختر الملف أولاً</button>
+  </div>
+
   <!-- عداد الطاقة الإجمالية المُولَّدة -->
   <div class="energy-counter-banner">
     <div style="z-index:1;">
