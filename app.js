@@ -2,7 +2,7 @@
 // PowerStep Grid — Dashboard JavaScript
 // ============================================================
 
-const API = window.location.origin;
+const API = 'http://localhost:8000';
 
 // ------------------------------------------------------------
 // Chart.js — Energy Chart
@@ -363,7 +363,7 @@ function showToast(message, level) {
 // ------------------------------------------------------------
 function initWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = protocol + '//' + window.location.host + '/ws/live';
+  const wsUrl = 'ws://localhost:8000/ws/live';
   const ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
