@@ -6,10 +6,10 @@ echo ===================================================
 
 echo [1] Installing Backend Dependencies (if missing)...
 cd backend
-pip install -r requirements.txt >nul 2>&1
+python -m pip install -r requirements.txt
 
 echo [2] Starting FastAPI Backend (Port 8000)...
-start "PowerStep Backend" cmd /c "uvicorn server:app --host 0.0.0.0 --port 8000"
+start "PowerStep Backend" cmd /c "python -m uvicorn server:app --host 0.0.0.0 --port 8000"
 cd ..
 
 echo [3] Starting Frontend UI Server (Port 5500)...
