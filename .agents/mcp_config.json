@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "ponytail": {
+      "command": "node",
+      "args": ["plugins/ponytail/ponytail-mcp/index.js"]
+    },
+    "omniRoute": {
+      "command": "node",
+      "args": ["plugins/OmniRoute/package.json"]
+    },
+    "graphify": {
+      "command": "python",
+      "args": ["-m", "graphify"]
+    }
+  }
+}

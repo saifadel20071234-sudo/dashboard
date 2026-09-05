@@ -56,6 +56,7 @@ function loadBadgeClass(state) {
 // ------------------------------------------------------------
 function updateLive(d) {
   try {
+    window.lastLiveData = d;
     // Day & Time
     if (document.getElementById('dayNum')) document.getElementById('dayNum').textContent = d.day;
     if (document.getElementById('simTime')) document.getElementById('simTime').textContent = d.sim_time;
@@ -257,24 +258,11 @@ async function refreshHistory() {
       });
     }
   } catch (e) { /* silent */ }
-// Sound Effects
-// ------------------------------------------------------------
-function playAlertSound() {
-  if (!window.userSettings || !window.userSettings.soundEnabled) return;
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(400, ctx.currentTime);
-  osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
-  gain.gain.setValueAtTime(0.1, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.3);
 }
 
+// ------------------------------------------------------------
+// Sound Effects
+// ------------------------------------------------------------
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
 
@@ -295,6 +283,7 @@ function playClickSound() {
 }
 
 function playAlertSound() {
+  if (!window.userSettings || !window.userSettings.soundEnabled) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -358,6 +347,7 @@ function showToast(message, level) {
   let icon = '⚠️';
   if (level === 'danger') icon = '🚨';
   if (level === 'info') icon = 'ℹ️';
+  if (level === 'success') icon = '✅';
   
   toast.innerHTML = `<span style="font-size:1.2rem;">${icon}</span> <span>${message}</span>`;
   container.appendChild(toast);
@@ -399,8 +389,9 @@ function initWebSocket() {
 window.userSettings = { efficiency: 80, batteryLow: 20, soundEnabled: true };
 
 function loadSettings() {
-  const saved = localStorage.getItem('powerstep_settings');
-  if (saved) window.userSettings = { ...window.userSettings, ...JSON.parse(saved) };
+  let saved = null;
+  try { saved = localStorage.getItem('powerstep_settings'); } catch(e) { /* ignore */ }
+  if (saved) { try { window.userSettings = { ...window.userSettings, ...JSON.parse(saved) }; } catch(e) { /* ignore */ } }
   
   const effInput = document.getElementById('effThreshold');
   const battInput = document.getElementById('battThreshold');
@@ -418,7 +409,7 @@ function saveSettings() {
     window.userSettings.efficiency = parseInt(effInput.value);
     window.userSettings.batteryLow = parseInt(battInput.value);
     window.userSettings.soundEnabled = soundInput.checked;
-    localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings));
+    try { localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings)); } catch(e) { /* ignore */ }
     hideSettingsModal();
     showToast("تم حفظ الإعدادات بنجاح", "success");
     if (window.lastLiveData) updateLive(window.lastLiveData);
@@ -427,7 +418,7 @@ function saveSettings() {
 
 function resetSettings() {
   window.userSettings = { efficiency: 80, batteryLow: 20, soundEnabled: true };
-  localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings));
+  try { localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings)); } catch(e) { /* ignore */ }
   loadSettings();
   showToast("تمت استعادة الإعدادات الافتراضية", "info");
 }
@@ -443,7 +434,7 @@ function hideSettingsModal() {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem('powerstep_theme', theme);
+  try { localStorage.setItem('powerstep_theme', theme); } catch(e) { /* ignore */ }
   const themeBtns = document.querySelectorAll('.theme-toggle-btn');
   themeBtns.forEach(btn => {
     if(btn.id === 'themeToggleBtn') btn.textContent = theme === 'light' ? '☀️' : '🌙';
@@ -452,16 +443,16 @@ function applyTheme(theme) {
   if (typeof Chart !== 'undefined') {
     Chart.defaults.color = theme === 'light' ? '#1e293b' : '#94a3b8';
     Chart.defaults.borderColor = theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
-    if (typeof chart !== 'undefined' && chart) chart.update();
-    if (typeof energyChart !== 'undefined' && energyChart) energyChart.update();
-    if (typeof battChart !== 'undefined' && battChart) battChart.update();
-    if (typeof footChart !== 'undefined' && footChart) footChart.update();
+    [chart, window.energyChart, window.battChart, window.footChart].forEach(c => {
+      if (c && c instanceof Chart) c.update();
+    });
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   // Init Theme
-  const savedTheme = localStorage.getItem('powerstep_theme') || 'dark';
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('powerstep_theme') || 'dark'; } catch(e) { /* ignore */ }
   applyTheme(savedTheme);
   
   const themeBtn = document.getElementById('themeToggleBtn');
@@ -473,6 +464,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Init Settings
   loadSettings();
+
+  // Close settings modal when clicking outside it or pressing Escape
+  const settingsModal = document.getElementById('settingsModal');
+  if(settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if(e.target === settingsModal) hideSettingsModal();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') hideSettingsModal();
+  });
 });
 
 // ------------------------------------------------------------

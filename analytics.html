@@ -8,15 +8,16 @@
 <title>PowerStep Grid — التحليلات التاريخية</title>
 <script src="vendor/chart.umd.js"></script>
 <script>
-  // مسح أي cache قديم عشان الصفحة تجيب النسخة الجديدة دايماً
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      regs.forEach(r => r.unregister());
-    });
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-    navigator.serviceWorker.register('sw.js');
-  }
-</script>
+    // إزالة الـ Service Worker نهائياً (بيخزن نسخ قديمة) — الداش بورد يحتاج دائماً أحدث نسخة من السيرفر
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+  </script>
 <style>
   @font-face{
     font-family:'Cairo';
@@ -30,11 +31,39 @@
     --purple: #b026ff;
     --orange: #ffaa00;
     --danger: #ff2a2a;
+    --red: #ff2a2a;
     --bg: #090e17;
     --card: rgba(16, 24, 39, 0.65);
     --ink: #e2e8f0;
     --muted: #94a3b8;
     --line: rgba(255, 255, 255, 0.12);
+  }
+  [data-theme="light"] {
+    --bg: #f1f5f9;
+    --card: rgba(255, 255, 255, 0.95);
+    --ink: #1e293b;
+    --muted: #64748b;
+    --green: #059669;
+    --red: #dc2626;
+    --orange: #d97706;
+    --blue: #0284c7;
+    --purple: #7e22ce;
+    --danger: rgba(220, 38, 38, 0.1);
+    --line: rgba(0,0,0,0.1);
+  }
+  [data-theme="light"] body {
+    background-image:
+      linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+  }
+  @media print {
+    body { background: #fff !important; }
+    :root {
+      --bg: #fff; --card: #fff; --ink: #000; --muted: #555;
+      --green: #059669; --red: #dc2626; --orange: #d97706; --blue: #0284c7; --purple: #7e22ce;
+      --line: #ddd;
+    }
+    .theme-toggle-btn, .conn-badge, .nav-links, .btn-export { display: none !important; }
   }
   *{box-sizing:border-box;}
   body{
@@ -104,9 +133,11 @@
   .card h3{ margin:0 0 16px; font-size:.9rem; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
 
   .theme-toggle-btn{
-    background:rgba(255,255,255,0.1); border:1px solid var(--line);
-    color:var(--ink); padding:8px 12px; border-radius:8px; cursor:pointer;
+    background:rgba(255,255,255,0.1); border:1px solid var(--line); border-radius:50%;
+    width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:1.1rem; transition:all 0.3s ease; color:var(--ink);
   }
+  .theme-toggle-btn:hover { background:rgba(255,255,255,0.1); transform:scale(1.05); box-shadow:0 0 10px rgba(0,255,204,0.2); }
 
   .btn-export{
     display:inline-flex; align-items:center; gap:8px;
@@ -135,9 +166,12 @@
     <div class="title">📊 PowerStep Grid — التحليلات التاريخية</div>
     <div class="subtitle">Multi-Day Analytics & Reports</div>
   </div>
-  <div class="nav-links">
-    <a href="/">🏠 لوحة التحكم</a>
-    <a href="/analytics.html" class="active">📊 التحليلات</a>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <button id="themeToggleBtn" class="theme-toggle-btn" title="تغيير المظهر (Dark/Light)">🌙</button>
+    <div class="nav-links">
+      <a href="/">🏠 لوحة التحكم</a>
+      <a href="/analytics.html" class="active">📊 التحليلات</a>
+    </div>
   </div>
 </header>
 
@@ -192,8 +226,32 @@
 
 <script>
 const API = window.location.origin;
-
 let energyChart, battChart, footChart;
+
+// Theme initialization for analytics
+function applyAnalyticsTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('powerstep_theme', theme); } catch(e) { /* ignore */ }
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = theme === 'light' ? '#1e293b' : '#94a3b8';
+    Chart.defaults.borderColor = theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+    [energyChart, battChart, footChart].forEach(c => {
+      if (c && c instanceof Chart) c.update();
+    });
+  }
+}
+(function initTheme() {
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('powerstep_theme') || 'dark'; } catch(e) { /* ignore */ }
+  applyAnalyticsTheme(savedTheme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme;
+    applyAnalyticsTheme(current === 'light' ? 'dark' : 'light');
+  });
+})();
 
 function initCharts(){
   const shared = {

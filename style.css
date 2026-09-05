@@ -11,6 +11,7 @@
   --purple: #b026ff;
   --orange: #ffaa00;
   --danger: #ff2a2a;
+  --red: #ff2a2a;
   
   --bg: #090e17;          
   --card: rgba(16, 24, 39, 0.65); 
@@ -421,6 +422,7 @@ footer{ text-align:center; color:var(--muted); font-size:.75rem; padding:20px 0 
   animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOutToast 0.5s 4.5s forwards;
 }
 .toast-msg.warning { border-color: var(--orange); border-right-color: var(--orange); box-shadow: 0 5px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,170,0,0.2); }
+.toast-msg.success { border-color: var(--green); border-right-color: var(--green); box-shadow: 0 5px 20px rgba(0,0,0,0.5), 0 0 15px rgba(0,255,204,0.2); }
 @keyframes slideInLeft {
   0% { transform: translateX(-100%); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
@@ -454,6 +456,27 @@ footer{ text-align:center; color:var(--muted); font-size:.75rem; padding:20px 0 
 [data-theme="light"] header .status,
 [data-theme="light"] .conn-badge { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: var(--ink); }
 [data-theme="light"] .energy-counter-banner { background: linear-gradient(135deg, rgba(255,255,255,1), rgba(240,240,240,1)); box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--line); }
+[data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.4); }
+[data-theme="light"] .modal-content { box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+[data-theme="light"] .tiles-grid { background: rgba(0,0,0,0.05); box-shadow: inset 0 0 20px rgba(0,0,0,0.05); }
+[data-theme="light"] .battery { background: rgba(0,0,0,0.08); }
+[data-theme="light"] header {
+  background: linear-gradient(120deg, rgba(255,255,255,0.95), rgba(220,235,255,0.9)) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  color: var(--ink);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+[data-theme="light"] header .title { text-shadow: none; }
+[data-theme="light"] header .sim-time { color: var(--ink); }
+[data-theme="light"] header .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+[data-theme="light"] #realClock { color: var(--green) !important; text-shadow: none; }
+[data-theme="light"] .gauge::before { background: var(--card); }
+[data-theme="light"] .tile-chip { border-color: rgba(0,0,0,0.1); color: var(--ink); }
+[data-theme="light"] .tile-chip .eff { color: var(--muted); }
+[data-theme="light"] .toast-msg { background: rgba(255,255,255,0.97); color: var(--ink); }
+[data-theme="light"] .counter-val { text-shadow: none; }
+[data-theme="light"] .info-card .info-value { text-shadow: none; }
+[data-theme="light"] .battery .label { color: var(--ink); text-shadow: none; }
 
 @media print {
   body { background: #fff !important; }
