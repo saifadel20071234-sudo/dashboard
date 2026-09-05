@@ -96,8 +96,19 @@ function updateLive(d) {
     if (d.storage_soc_pct !== undefined) {
       const battFill = document.getElementById('battFill');
       const battVal = document.getElementById('battVal');
-      if (battFill) battFill.style.width = d.storage_soc_pct + '%';
-      if (battVal) battVal.textContent = Math.round(d.storage_soc_pct);
+      const soc = Math.round(d.storage_soc_pct);
+      if (battFill) {
+        battFill.style.width = soc + '%';
+        const battLimit = (window.userSettings && window.userSettings.batteryLow) ? window.userSettings.batteryLow : 20;
+        if (soc <= battLimit) {
+          battFill.style.background = 'var(--red)';
+          battFill.style.boxShadow = '0 0 10px var(--red)';
+        } else {
+          battFill.style.background = 'var(--green)';
+          battFill.style.boxShadow = '0 0 10px var(--green)';
+        }
+      }
+      if (battVal) battVal.textContent = soc;
     }
 
     // Power Source
@@ -167,7 +178,9 @@ function updateLive(d) {
         if (t.stepped_on) {
           chip.classList.add('stepped');
         }
-        if (t.efficiency_pct < 80) {
+        
+        const effLimit = (window.userSettings && window.userSettings.efficiency) ? window.userSettings.efficiency : 80;
+        if (t.efficiency_pct < effLimit) {
           chip.classList.add('faulty');
         }
 
@@ -244,15 +257,29 @@ async function refreshHistory() {
       });
     }
   } catch (e) { /* silent */ }
-}
-
-// ------------------------------------------------------------
 // Sound Effects
 // ------------------------------------------------------------
+function playAlertSound() {
+  if (!window.userSettings || !window.userSettings.soundEnabled) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(400, ctx.currentTime);
+  osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.3);
+}
+
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
 
 function playClickSound() {
+  if (!window.userSettings || !window.userSettings.soundEnabled) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -365,6 +392,88 @@ function initWebSocket() {
   };
 }
 
+
+// ------------------------------------------------------------
+// Theme & Settings Management
+// ------------------------------------------------------------
+window.userSettings = { efficiency: 80, batteryLow: 20, soundEnabled: true };
+
+function loadSettings() {
+  const saved = localStorage.getItem('powerstep_settings');
+  if (saved) window.userSettings = { ...window.userSettings, ...JSON.parse(saved) };
+  
+  const effInput = document.getElementById('effThreshold');
+  const battInput = document.getElementById('battThreshold');
+  const soundInput = document.getElementById('soundToggle');
+  if(effInput) { effInput.value = window.userSettings.efficiency; document.getElementById('effValDisp').textContent = window.userSettings.efficiency; }
+  if(battInput) { battInput.value = window.userSettings.batteryLow; document.getElementById('battValDisp').textContent = window.userSettings.batteryLow; }
+  if(soundInput) { soundInput.checked = window.userSettings.soundEnabled; }
+}
+
+function saveSettings() {
+  const effInput = document.getElementById('effThreshold');
+  const battInput = document.getElementById('battThreshold');
+  const soundInput = document.getElementById('soundToggle');
+  if(effInput && battInput && soundInput) {
+    window.userSettings.efficiency = parseInt(effInput.value);
+    window.userSettings.batteryLow = parseInt(battInput.value);
+    window.userSettings.soundEnabled = soundInput.checked;
+    localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings));
+    hideSettingsModal();
+    showToast("تم حفظ الإعدادات بنجاح", "success");
+    if (window.lastLiveData) updateLive(window.lastLiveData);
+  }
+}
+
+function resetSettings() {
+  window.userSettings = { efficiency: 80, batteryLow: 20, soundEnabled: true };
+  localStorage.setItem('powerstep_settings', JSON.stringify(window.userSettings));
+  loadSettings();
+  showToast("تمت استعادة الإعدادات الافتراضية", "info");
+}
+
+function showSettingsModal() { 
+  const modal = document.getElementById('settingsModal');
+  if(modal) modal.classList.remove('hidden'); 
+}
+function hideSettingsModal() { 
+  const modal = document.getElementById('settingsModal');
+  if(modal) modal.classList.add('hidden'); 
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('powerstep_theme', theme);
+  const themeBtns = document.querySelectorAll('.theme-toggle-btn');
+  themeBtns.forEach(btn => {
+    if(btn.id === 'themeToggleBtn') btn.textContent = theme === 'light' ? '☀️' : '🌙';
+  });
+  
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = theme === 'light' ? '#1e293b' : '#94a3b8';
+    Chart.defaults.borderColor = theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+    if (typeof chart !== 'undefined' && chart) chart.update();
+    if (typeof energyChart !== 'undefined' && energyChart) energyChart.update();
+    if (typeof battChart !== 'undefined' && battChart) battChart.update();
+    if (typeof footChart !== 'undefined' && footChart) footChart.update();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Init Theme
+  const savedTheme = localStorage.getItem('powerstep_theme') || 'dark';
+  applyTheme(savedTheme);
+  
+  const themeBtn = document.getElementById('themeToggleBtn');
+  if(themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.dataset.theme;
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    });
+  }
+  // Init Settings
+  loadSettings();
+});
 
 // ------------------------------------------------------------
 // Initialize

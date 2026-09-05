@@ -429,3 +429,60 @@ footer{ text-align:center; color:var(--muted); font-size:.75rem; padding:20px 0 
   0% { transform: translateX(0); opacity: 1; }
   100% { transform: translateX(-20px); opacity: 0; }
 }
+
+/* ============================================================
+   NEW: Light Theme & Modal Overrides
+   ============================================================ */
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --card: rgba(255, 255, 255, 0.95);
+  --ink: #1e293b;
+  --muted: #64748b;
+  --green: #059669;
+  --red: #dc2626;
+  --orange: #d97706;
+  --blue: #0284c7;
+  --purple: #7e22ce;
+  --danger: rgba(220, 38, 38, 0.1);
+  --line: rgba(0,0,0,0.1);
+}
+[data-theme="light"] body {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+}
+[data-theme="light"] header .status,
+[data-theme="light"] .conn-badge { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: var(--ink); }
+[data-theme="light"] .energy-counter-banner { background: linear-gradient(135deg, rgba(255,255,255,1), rgba(240,240,240,1)); box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--line); }
+
+@media print {
+  body { background: #fff !important; }
+  :root {
+    --bg: #fff; --card: #fff; --ink: #000; --muted: #555;
+    --green: #059669; --red: #dc2626; --orange: #d97706; --blue: #0284c7; --purple: #7e22ce;
+    --line: #ddd;
+  }
+  .theme-toggle-btn, .conn-badge, .nav-links, .btn-export { display: none !important; }
+}
+
+.theme-toggle-btn {
+  background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 50%;
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 1.1rem; transition: all 0.3s ease; color: var(--ink);
+}
+.theme-toggle-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); box-shadow: 0 0 10px rgba(0,255,204,0.2); }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center; z-index: 10000;
+  opacity: 1; transition: opacity 0.3s ease;
+}
+.modal-overlay.hidden { opacity: 0; pointer-events: none; }
+.modal-content {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 24px; width: 90%; max-width: 400px; color: var(--ink);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.setting-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+.setting-group label { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+.setting-group input[type="range"] { width: 100%; accent-color: var(--green); cursor: pointer; }

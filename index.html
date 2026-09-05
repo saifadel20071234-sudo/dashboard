@@ -43,14 +43,49 @@
 
 <div id="toastContainer" class="toast-container"></div>
 
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+      <h3 style="margin:0; color:var(--green);">⚙️ إعدادات النظام</h3>
+      <button onclick="hideSettingsModal()" style="background:transparent; border:none; color:var(--red); font-size:1.2rem; cursor:pointer;">✖</button>
+    </div>
+    
+    <div class="setting-group">
+      <label>حد تحذير كفاءة البلاطة (<span id="effValDisp" style="color:var(--green);">80</span>%)</label>
+      <input type="range" id="effThreshold" min="50" max="95" value="80" oninput="document.getElementById('effValDisp').textContent=this.value">
+      <small style="color:var(--muted); font-size:0.75rem;">تتحول البلاطة للأحمر إذا انخفضت الكفاءة عن هذا الحد.</small>
+    </div>
+    
+    <div class="setting-group">
+      <label>حد تحذير البطارية (<span id="battValDisp" style="color:var(--red);">20</span>%)</label>
+      <input type="range" id="battThreshold" min="10" max="40" value="20" oninput="document.getElementById('battValDisp').textContent=this.value">
+    </div>
+
+    <div class="setting-group" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
+      <label style="margin:0;">تفعيل التنبيهات الصوتية</label>
+      <input type="checkbox" id="soundToggle" checked style="width:20px; height:20px;">
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:25px;">
+      <button class="btn-export" style="flex:1; justify-content:center;" onclick="saveSettings()">💾 حفظ</button>
+      <button class="btn-export" style="flex:1; justify-content:center; background:transparent; border-color:var(--muted); color:var(--ink);" onclick="resetSettings()">↺ افتراضي</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div>
     <div class="title">⚡ PowerStep Grid Control</div>
     <div class="subtitle">Sci-Fi AI Dashboard — محاكاة أرضية المستقبل المتكاملة</div>
   </div>
   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-    <div id="connectionBadge" class="conn-badge online">
-      <span class="conn-dot"></span> <span id="connText">SYSTEM ONLINE</span>
+    <div style="display:flex; gap: 8px;">
+      <button id="themeToggleBtn" class="theme-toggle-btn" title="تغيير المظهر (Dark/Light)">🌙</button>
+      <button class="theme-toggle-btn" title="إعدادات النظام" onclick="showSettingsModal()">⚙️</button>
+      <div id="connectionBadge" class="conn-badge online">
+        <span class="conn-dot"></span> <span id="connText">SYSTEM ONLINE</span>
+      </div>
     </div>
     <div class="status" style="margin-bottom:0; background:rgba(0,0,0,0.5);">
       <span class="dot"></span>
