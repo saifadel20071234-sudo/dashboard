@@ -8,6 +8,60 @@
 
 ---
 
+## ⚡ البدء السريع (Quick Start)
+
+### 1) التحميل (مرة واحدة)
+
+```bash
+git clone https://github.com/saifadel20071234-sudo/dashboard.git
+cd dashboard
+```
+
+### 2) تثبيت الحزم (مرة واحدة)
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### 3) وضع الموديلات (لو متاحة)
+
+أنشئ مجلد داخل `backend\` اسمه بالظبط **`data cleaning and AI models`** وضع فيه:
+
+```
+piezo_step_model.joblib
+wifi_occupancy_model.joblib
+wifi_count_model.joblib
+peak_forecast_model_1st.joblib
+university_simulated_week_1st.csv
+```
+
+> النظام يعمل حتى من غيرهم — لكن الـ AI (كشف الخطوات/الإشغال/عدد الأشخاص/التنبؤ) لن يتفعَّل إلا عند وجودهم بالاسم المحدد تماماً.
+
+### 4) توصيل الأجهزة
+
+- البيزو على منفذ **`COM6`** (لو منفذ مختلف: مثلاً `set PIEZO_SERIAL_PORT=COM5`).
+- الـ ESP32 مضبوط بالفيرموير ليرسل إلى `:8000/api/ingest` — لا حاجة لأي إعداد.
+
+### 5) التشغيل
+
+```bash
+Start_Dashboard.bat
+```
+
+يفتح 3 نوافذ:
+- **PowerStep Backend** → `main_system.py` على `:8000`
+- **PowerStep Frontend** → الواجهة على `:5500`
+- **المتصفح** → يفتح `http://localhost:5500/`
+
+### 6) التحقق من التحميل
+
+راجع نافذة Backend: ظهور رسالة `Model file not found` يعني الموديلات ليست في مكانها (عد للخطوة 3). ظهور رسائل تحميل `loaded` يعني كل شيء جاهز.
+
+> **من موبايل على نفس الشبكة:** افتح `http://<IP-الكمبيوتر>:5500/` — يعمل تلقائياً (لا حاجة لإعداد).
+
+---
+
 ## 1) البنية (Architecture)
 
 ```
