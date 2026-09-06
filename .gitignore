@@ -28,3 +28,7 @@ __pycache__/
 # Environment
 .env
 .env.local
+
+# Runtime data (created on boot by team's main_system)
+backend/runtime_data/
+backend/logs/

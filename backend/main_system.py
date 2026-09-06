@@ -190,7 +190,7 @@ class LivenessWatchdog(threading.Thread):
 
 def create_app(engine: InferenceEngine, db: DatabaseManager, alerts: AlertManager, liveness: LivenessTracker) -> Flask:
     app = Flask(__name__)
-    get_bridge().attach(app)
+    get_bridge().attach(app).set_db(db)
 
     @app.route("/", methods=["GET"])
     def health():

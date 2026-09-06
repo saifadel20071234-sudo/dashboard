@@ -96,6 +96,7 @@ class DashboardBridge:
 
         self._last_piezo: dict = {}
         self._last_wifi: dict = {}
+        self._db = None
 
         self._steps: deque = deque()          # (tile_id, time)
         self._history: deque = deque(maxlen=HISTORY_LIMIT)
@@ -115,9 +116,12 @@ class DashboardBridge:
 
             tid = _tile_id(record)
             step_status = _text(record, "step_status", "Step Status", "status").upper()
+            ai_detected = _pick(record, "ai_step_detected", default=0) > 0
+            raw_footfall = _pick(record, "footfall", default=0) > 0
             pressed = tid is not None and (
                 step_status in ("PRESSED", "ON", "1", "TRUE", "ACTIVE") or
-                "PRESSED" in step_status or "ON" in step_status
+                "PRESSED" in step_status or "ON" in step_status or
+                ai_detected or raw_footfall
             )
             if pressed:
                 now = time.time()
@@ -130,6 +134,11 @@ class DashboardBridge:
         with self._lock:
             if isinstance(record, dict):
                 self._last_wifi = record
+
+    def set_db(self, db) -> None:
+        """يمرر الـ DatabaseManager بتاع الفريق عشان نقدر نقرا التنبيهات
+        الحقيقية من alerts_log ويعرضها الداش بورد."""
+        self._db = db
 
     # ------------------------------------------------------------------
     # الإلحاق بالـ Flask app
@@ -193,7 +202,7 @@ class DashboardBridge:
         now = time.time()
         active_steps = [tid for tid, ts in steps if now - ts <= PRESS_WINDOW_SEC]
 
-        gen_w = _pick(p, "power_w", "power", "avg_watt", "Power (W)", default=0.0) * POWER_SCALE
+        gen_w = _pick(p, "generation_w", "power_w", "power", "avg_watt", "Power (W)", default=0.0) * POWER_SCALE
         con_w = 0.0  # القراءات الحقيقية مش بتقيس استهلاك — نرسله 0
         voltage = _pick(p, "voltage", "voltage_v", "Voltage (V)", default=0.0)
         current = _pick(p, "current", "current_a", "Current (A)", default=0.0)
@@ -209,7 +218,9 @@ class DashboardBridge:
         source_text = _text(p, "power_source", "Power Source", default="harvested").lower()
         power_source = "harvested" if source_text and source_text != "grid" else "grid"
 
-        footfall = int(_pick(w, "people_count", "footfall", "count", default=0))
+        footfall = int(_pick(w, "final_people_count", "firmware_people_count", "people_count", "footfall", "count", default=0))
+        if footfall == 0:
+            footfall = int(_pick(p, "footfall", "people_count", default=0))
 
         tiles = []
         for i in range(1, NUM_TILES + 1):
@@ -225,11 +236,23 @@ class DashboardBridge:
             uptime_sec // 3600, (uptime_sec % 3600) // 60, uptime_sec % 60
         )
 
-        last_ts = _text(p, "timestamp", "ts", "sim_time", "Timestamp",
+        last_ts = _text(p, "received_at", "timestamp", "ts", "device_sim_time", "sim_time", "Timestamp",
                         default=time.strftime("%H:%M:%S"))
         sim_time = last_ts.split(" ")[-1] if " " in last_ts else last_ts
 
         has_data = bool(p or w)
+
+        alerts = []
+        if self._db is not None:
+            try:
+                for rec in self._db.get_recent_alerts(limit=10):
+                    alerts.append({
+                        "level": (rec.get("severity") or "info").lower(),
+                        "text": rec.get("message") or "",
+                        "type": rec.get("alert_type") or "",
+                    })
+            except Exception:
+                pass
 
         return {
             "day": 1,
@@ -255,7 +278,7 @@ class DashboardBridge:
                 "anomaly_model": "Online" if has_data else "Offline",
             },
             "loads": dict(self._loads),
-            "alerts": [],
+            "alerts": alerts,
             "tiles": tiles,
         }
 

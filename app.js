@@ -168,25 +168,36 @@ function updateLive(d) {
       }
     }
 
-    // Tiles Heatmap
-    const tilesGrid = document.getElementById('tilesGrid');
-    if (tilesGrid && d.tiles) {
-      tilesGrid.innerHTML = '';
-      d.tiles.forEach(t => {
+    // Corridor Heatmap (16 tiles → two rows around a central wall)
+    const rowTop = document.getElementById('corridorRowTop');
+    const rowBottom = document.getElementById('corridorRowBottom');
+    const corridor = document.getElementById('corridor');
+    if (corridor && d.tiles) {
+      const tileCount = d.tiles.length;
+      const half = Math.ceil(tileCount / 2);
+      // top row = tiles 1..half, bottom row = remaining tiles
+      const top = d.tiles.slice(0, half);
+      const bottom = d.tiles.slice(half, tileCount);
+
+      rowTop.innerHTML = '';
+      rowBottom.innerHTML = '';
+      top.forEach(t => {
         const chip = document.createElement('div');
-        chip.className = 'tile-chip';
-
-        if (t.stepped_on) {
-          chip.classList.add('stepped');
-        }
-        
+        chip.className = 'corridor-tile';
+        if (t.stepped_on) chip.classList.add('stepped');
         const effLimit = (window.userSettings && window.userSettings.efficiency) ? window.userSettings.efficiency : 80;
-        if (t.efficiency_pct < effLimit) {
-          chip.classList.add('faulty');
-        }
-
-        chip.innerHTML = `<span>Tile ${t.id}</span><span class="eff">${Math.round(t.efficiency_pct)}%</span>`;
-        tilesGrid.appendChild(chip);
+        if (t.efficiency_pct < effLimit) chip.classList.add('faulty');
+        chip.innerHTML = `<span class="ct-num">${t.id}</span><span class="ct-eff">${Math.round(t.efficiency_pct)}%</span>`;
+        rowTop.appendChild(chip);
+      });
+      bottom.forEach(t => {
+        const chip = document.createElement('div');
+        chip.className = 'corridor-tile';
+        if (t.stepped_on) chip.classList.add('stepped');
+        const effLimit = (window.userSettings && window.userSettings.efficiency) ? window.userSettings.efficiency : 80;
+        if (t.efficiency_pct < effLimit) chip.classList.add('faulty');
+        chip.innerHTML = `<span class="ct-num">${t.id}</span><span class="ct-eff">${Math.round(t.efficiency_pct)}%</span>`;
+        rowBottom.appendChild(chip);
       });
     }
 
