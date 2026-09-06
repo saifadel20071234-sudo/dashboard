@@ -1,3 +1,6 @@
 fastapi
 uvicorn
 websockets
+flask
+flask-sock
+flask-cors
