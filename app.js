@@ -41,8 +41,8 @@ function initChart() {
 function setGauge(id, pct, valEl, val) {
   const gauge = document.getElementById(id);
   const valueElement = document.getElementById(valEl);
-  if (gauge) gauge.style.setProperty('--pct', Math.min(pct, 100));
-  if (valueElement) valueElement.textContent = val;
+  if (gauge) gauge.style.setProperty('--pct', pct == null ? 0 : Math.min(pct, 100));
+  if (valueElement) valueElement.textContent = (val == null ? '—' : val);
 }
 
 // ------------------------------------------------------------
@@ -93,7 +93,7 @@ function updateLive(d) {
       setGauge('gaugeCon', d.consumption_w * 10, 'conVal', d.consumption_w.toFixed(1));
     }
     if (d.self_sufficiency_pct !== undefined) {
-      setGauge('gaugeSelf', d.self_sufficiency_pct, 'selfVal', Math.round(d.self_sufficiency_pct));
+      setGauge('gaugeSelf', d.self_sufficiency_pct, 'selfVal', d.self_sufficiency_pct == null ? null : Math.round(d.self_sufficiency_pct));
     }
 
     // Battery
@@ -325,14 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a, button').forEach(el => {
     el.addEventListener('mouseenter', playClickSound);
   });
-  
-  // 3. LOADING SCREEN: After DOMContentLoaded, wait 2.5s then add 'hidden'
-  setTimeout(() => {
-    const loader = document.querySelector('.loading-overlay');
-    if (loader) {
-      loader.classList.add('hidden');
-    }
-  }, 2500);
 });
 
 // ------------------------------------------------------------

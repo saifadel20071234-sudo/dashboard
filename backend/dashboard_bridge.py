@@ -262,7 +262,7 @@ class DashboardBridge:
             "generation_w": round(gen_w, 6),
             "consumption_w": round(con_w, 6),
             "forecast_w": round(gen_w * 1.05, 6),
-            "self_sufficiency_pct": round((gen_w / max(0.1, con_w)) * 100 if gen_w > 0 else 0, 1),
+            "self_sufficiency_pct": (round(min(100.0, (gen_w / con_w) * 100.0), 1) if (con_w > 0 and gen_w > 0) else None),
             "storage_soc_pct": round(soc, 1),
             "power_source": power_source,
             "footfall": footfall,
