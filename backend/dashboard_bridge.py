@@ -248,8 +248,11 @@ class DashboardBridge:
         if self._db is not None:
             try:
                 for rec in self._db.get_recent_alerts(limit=10):
+                    level = (rec.get("severity") or "info").lower()
+                    if level == "critical":
+                        level = "danger"  # الواجهة تفهم danger مش critical
                     alerts.append({
-                        "level": (rec.get("severity") or "info").lower(),
+                        "level": level,
                         "text": rec.get("message") or "",
                         "type": rec.get("alert_type") or "",
                     })
