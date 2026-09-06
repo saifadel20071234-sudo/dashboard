@@ -27,6 +27,7 @@ import time
 from collections import deque
 
 from flask_sock import Sock
+from flask_cors import CORS
 
 NUM_TILES = 16
 PRESS_WINDOW_SEC = 3.0        # المدة اللي بتفضل فيها البلاطة مضيئة بعد الضغط
@@ -144,6 +145,7 @@ class DashboardBridge:
     # الإلحاق بالـ Flask app
     # ------------------------------------------------------------------
     def attach(self, app) -> None:
+        CORS(app)  # فيتلك للداش بورد من localhost:5500 (fetch للحقول النصية)
         self._sock = Sock(app)
 
         @self._sock.route("/ws/live")
