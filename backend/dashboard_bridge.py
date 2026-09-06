@@ -226,7 +226,7 @@ class DashboardBridge:
 
         tiles = []
         for i in range(1, NUM_TILES + 1):
-            eff = _pick(p, "efficiency_pct", "efficiency", default=100.0)
+            eff = _pick(p, "tile_efficiency_pct", "efficiency_pct", "efficiency", default=100.0)
             tiles.append({
                 "id": i,
                 "stepped_on": i in active_steps,
