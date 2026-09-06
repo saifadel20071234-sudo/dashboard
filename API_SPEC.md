@@ -151,7 +151,32 @@
 
 ---
 
-## 4. CSV Export
+## 4. Analytics Daily — 24-Hour Peak & Idle Times
+
+- **Path:** `/api/analytics/daily`
+- **Method:** GET
+- **Parameters:** `?date=YYYY-MM-DD` (Optional, defaults to latest available date)
+- **Response:** JSON containing available days and aggregated 24-hour data for the selected date.
+
+### Response Schema (JSON)
+
+```json
+{
+  "days": ["2026-09-06", "2026-09-05"],
+  "selected_date": "2026-09-06",
+  "data": {
+    "hours": ["00:00", "01:00", "...", "23:00"],
+    "gen_wh": [0.0, 0.0, 5.1, 0.0],
+    "con_wh": [0.0, 0.0, 0.0, 0.0],
+    "soc_wh": [80.1, 80.0, 81.2, 80.5],
+    "footfall": [0.0, 0.0, 15.2, 0.0]
+  }
+}
+```
+
+---
+
+## 5. CSV Export
 
 - **Path:** `/api/export/csv`
 - **Method:** GET
@@ -167,7 +192,8 @@ Nothing specific is parsed client-side — the user just downloads the file.
 |---|---|---|
 | `/ws/live` | WebSocket | Live telemetry (1 msg/sec) |
 | `/api/history` | GET | Line chart + footfall (polled 4s) |
-| `/api/analytics/summary` | GET | Analytics page (polled 10s) |
+| `/api/analytics/summary` | GET | Analytics page (polled 10s, powered by DB history) |
+| `/api/analytics/daily` | GET | 24-hour peak/idle chart for analytics (powered by DB history) |
 | `/api/export/csv` | GET | CSV download |
 
 ---

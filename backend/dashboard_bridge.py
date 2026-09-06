@@ -156,6 +156,7 @@ class DashboardBridge:
 
         app.add_url_rule("/api/history", view_func=self._api_history, methods=["GET"])
         app.add_url_rule("/api/analytics/summary", view_func=self._api_analytics, methods=["GET"])
+        app.add_url_rule("/api/analytics/daily", view_func=self._api_analytics_daily, methods=["GET"])
         app.add_url_rule("/api/export/csv", view_func=self._api_export_csv, methods=["GET"])
 
         threading.Thread(target=self._broadcast_loop, name="dashboard-broadcast", daemon=True).start()
@@ -314,27 +315,69 @@ class DashboardBridge:
         }
 
     def _api_analytics(self):
-        hist = list(self._history)
-        gen_vals = [h["gen_wh"] for h in hist]
-        con_vals = [h["con_wh"] for h in hist]
-        foot_vals = [h["footfall"] for h in hist]
+        from flask import request
+        mode = request.args.get('mode', 'history')
 
-        recent = hist[-8:]
-        return {
-            "total_records": len(hist),
-            "peak_generation_wh": round(max(gen_vals), 6) if gen_vals else 0,
-            "peak_consumption_wh": round(max(con_vals), 6) if con_vals else 0,
-            "avg_footfall": round(sum(foot_vals) / len(foot_vals), 2) if foot_vals else 0,
-            "recent_data": [
-                {
+        if mode == 'live':
+            hist = list(self._history)
+            total = len(hist)
+            if not hist:
+                return {
+                    "total_records": 0, "peak_generation_wh": 0, "peak_consumption_wh": 0, 
+                    "avg_footfall": 0, "recent_data": [], "total_generation_wh": 0, "heatmap_data": []
+                }
+            peak_gen = max((h["gen_wh"] for h in hist), default=0.0)
+            peak_con = max((h["con_wh"] for h in hist), default=0.0)
+            avg_foot = sum(h["footfall"] for h in hist) / max(1, len(hist))
+            
+            # Format recent data for charts
+            recent = []
+            for h in hist[-40:]:
+                recent.append({
                     "sim_hour": h["t"],
                     "gen_wh": h["gen_wh"],
                     "con_wh": h["con_wh"],
                     "soc_wh": h["soc_wh"],
-                    "footfall": h["footfall"],
-                }
-                for h in recent
-            ],
+                    "footfall": h["footfall"]
+                })
+                
+            return {
+                "total_records": total,
+                "peak_generation_wh": round(peak_gen, 2),
+                "total_generation_wh": round(peak_gen * len(hist), 2), # Approximated for live mode
+                "peak_consumption_wh": round(peak_con, 2),
+                "avg_footfall": round(avg_foot, 2),
+                "recent_data": recent,
+                "heatmap_data": [] # Heatmap is historical only
+            }
+
+        # User requested analytics to ALWAYS rely on the stored DB data, not live history
+        if self._db is not None:
+            return self._db.get_analytics_summary_from_db()
+        return {
+            "total_records": 0, "peak_generation_wh": 0, "peak_consumption_wh": 0, 
+            "avg_footfall": 0, "recent_data": [], "total_generation_wh": 0, "heatmap_data": []
+        }
+
+    def _api_analytics_daily(self):
+        from flask import request
+        if self._db is None:
+            return {"days": [], "data": {}}
+        
+        days = self._db.get_available_days()
+        selected_date = request.args.get("date")
+        
+        if not selected_date and days:
+            selected_date = days[0]
+            
+        data = {}
+        if selected_date:
+            data = self._db.get_daily_chart_data(selected_date)
+            
+        return {
+            "days": days,
+            "selected_date": selected_date,
+            "data": data
         }
 
     def _api_export_csv(self):

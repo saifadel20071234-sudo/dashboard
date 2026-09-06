@@ -202,3 +202,145 @@ class DatabaseManager:
                 "SELECT * FROM alerts_log ORDER BY id DESC LIMIT ?", (limit,)
             ).fetchall()
             return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Analytics & History Reads (from static file / historical DB)
+    # ------------------------------------------------------------------
+    def get_available_days(self, limit: int = 5) -> list[str]:
+        """Returns the last distinct dates (YYYY-MM-DD) available in the DB."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT DATE(received_at) as day FROM piezo_readings ORDER BY day DESC LIMIT ?", (limit,)
+            ).fetchall()
+            return [r["day"] for r in rows if r["day"]]
+
+    def get_daily_chart_data(self, date_str: str) -> dict[str, list[float]]:
+        """Aggregates data by hour (00-23) for the given date."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT 
+                    strftime('%H', received_at) as hour,
+                    AVG(generation_w) * 10000.0 as avg_gen,
+                    AVG(storage_soc_pct) as avg_soc,
+                    AVG(footfall) as avg_footfall
+                FROM piezo_readings 
+                WHERE DATE(received_at) = ?
+                GROUP BY hour
+                ORDER BY hour ASC
+                """,
+                (date_str,)
+            ).fetchall()
+            
+            # Initialize 24 hours with 0
+            hours = [f"{i:02d}:00" for i in range(24)]
+            gen = [0.0] * 24
+            con = [0.0] * 24  # Will be mocked based on footfall
+            soc = [0.0] * 24
+            foot = [0.0] * 24
+            
+            for r in rows:
+                if not r["hour"]: continue
+                h = int(r["hour"])
+                gen_val = round(r["avg_gen"] or 0.0, 4)
+                foot_val = round(r["avg_footfall"] or 0.0, 1)
+                
+                gen[h] = gen_val
+                soc[h] = round(r["avg_soc"] or 0.0, 1)
+                foot[h] = foot_val
+                # Realistic mock consumption: base load 5W + 1.5W per person footfall
+                con[h] = round(5.0 + (foot_val * 1.5), 2) if foot_val > 0 else 5.0
+                
+            return {
+                "hours": hours,
+                "gen_wh": gen,
+                "con_wh": con,
+                "soc_wh": soc,
+                "footfall": foot
+            }
+
+    def get_analytics_summary_from_db(self) -> dict[str, Any]:
+        """Calculates total records, peaks, and recent history points from the DB."""
+        with self._connect() as conn:
+            stats = conn.execute(
+                """
+                SELECT 
+                    COUNT(*) as total_records,
+                    MAX(generation_w) * 10000.0 as peak_gen,
+                    SUM(generation_w) * 10000.0 as total_gen,
+                    MAX(footfall) as peak_footfall,
+                    AVG(footfall) as avg_footfall
+                FROM piezo_readings
+                """
+            ).fetchone()
+            
+            # For recent_data, fetch data across the ENTIRE recorded history grouped by hour (or every few hours)
+            recent_rows = conn.execute(
+                """
+                SELECT 
+                    strftime('%Y-%m-%d %H', received_at) as time_bucket,
+                    MAX(received_at) as received_at,
+                    AVG(generation_w) * 10000.0 as generation_w,
+                    AVG(storage_soc_pct) as storage_soc_pct,
+                    SUM(footfall) as footfall
+                FROM piezo_readings
+                GROUP BY time_bucket
+                ORDER BY time_bucket ASC
+                """
+            ).fetchall()
+            
+            recent_data = []
+            for r in recent_rows:
+                try:
+                    dt = r["received_at"]
+                    time_part = dt.split('T')[1] if 'T' in dt else dt.split(' ')[1]
+                    h, m, _ = map(int, time_part.split(':'))
+                    sim_hour = h + (m / 60.0)
+                except Exception:
+                    sim_hour = 0.0
+                    
+                foot_val = int(r["footfall"] or 0)
+                # Realistic mock consumption: base load 5W + 1.5W per person
+                mock_con = round(5.0 + (foot_val * 1.5), 2) if foot_val > 0 else 5.0
+
+                recent_data.append({
+                    "sim_hour": round(sim_hour, 2),
+                    "gen_wh": round(r["generation_w"] or 0.0, 4),
+                    "con_wh": mock_con,
+                    "soc_wh": round(r["storage_soc_pct"] or 0.0, 1),
+                    "footfall": foot_val
+                })
+                
+            peak_footfall = stats["peak_footfall"] or 0
+            peak_con = round(5.0 + (peak_footfall * 1.5), 2)
+            
+            # Fetch Heatmap Data (grouped by day of week [0=Sun, 6=Sat] and hour)
+            heatmap_rows = conn.execute(
+                """
+                SELECT 
+                    strftime('%w', received_at) as day_of_week, 
+                    strftime('%H', received_at) as hour, 
+                    SUM(footfall) as total_footfall
+                FROM piezo_readings
+                WHERE received_at IS NOT NULL
+                GROUP BY day_of_week, hour
+                """
+            ).fetchall()
+            
+            # Initialize 7x24 matrix with 0
+            heatmap_data = [[0 for _ in range(24)] for _ in range(7)]
+            for hr in heatmap_rows:
+                if hr["day_of_week"] is not None and hr["hour"] is not None:
+                    d = int(hr["day_of_week"])
+                    h = int(hr["hour"])
+                    heatmap_data[d][h] = int(hr["total_footfall"] or 0)
+                
+            return {
+                "total_records": stats["total_records"] or 0,
+                "peak_generation_wh": round(stats["peak_gen"] or 0.0, 2),
+                "total_generation_wh": round(stats["total_gen"] or 0.0, 2),
+                "peak_consumption_wh": peak_con,
+                "avg_footfall": round(stats["avg_footfall"] or 0.0, 2),
+                "recent_data": recent_data,
+                "heatmap_data": heatmap_data
+            }
