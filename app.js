@@ -218,10 +218,10 @@ function updateLive(d) {
       document.getElementById('costSavedVal').textContent = d.cost_saved.toFixed(2);
     }
     if (d.exported_wh !== undefined && document.getElementById('exportedWhVal')) {
-      document.getElementById('exportedWhVal').textContent = d.exported_wh.toFixed(1);
+      document.getElementById('exportedWhVal').textContent = d.exported_wh == null ? '—' : d.exported_wh.toFixed(1);
     }
     if (d.battery_temperature !== undefined && document.getElementById('battTempVal')) {
-      document.getElementById('battTempVal').textContent = d.battery_temperature.toFixed(1);
+      document.getElementById('battTempVal').textContent = d.battery_temperature == null ? '—' : d.battery_temperature.toFixed(1);
     }
     if (d.ai_status !== undefined) {
       const fStatus = document.getElementById('aiStatusForecast');

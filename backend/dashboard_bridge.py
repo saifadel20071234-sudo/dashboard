@@ -213,9 +213,9 @@ class DashboardBridge:
             current = gen_w / voltage
 
         soc = _pick(p, "soc", "storage_soc_pct", "soc_pct", "SOC (%)", default=0.0)
-        temperature = _pick(p, "temperature", "battery_temperature", default=0.0)
+        temperature = _pick(p, "temperature", "battery_temperature", default=None)
         cumulative_gen = _pick(p, "cumulative_gen_wh", "Cumulative Gen (Wh)", default=0.0)
-        exported = _pick(p, "exported_wh", default=0.0)
+        exported = _pick(p, "exported_wh", default=None)
 
         source_text = _text(p, "power_source", "Power Source", default="harvested").lower()
         power_source = "harvested" if source_text and source_text != "grid" else "grid"
@@ -272,12 +272,12 @@ class DashboardBridge:
             "voltage_v": round(voltage, 4),
             "current_a": round(current, 6),
             "system_uptime": uptime_str,
-            "battery_temperature": round(temperature, 1),
+            "battery_temperature": round(temperature, 1) if temperature is not None else None,
             "cumulative_gen_wh": round(cumulative_gen, 4),
             "cumulative_con_wh": 0.0,
             "co2_saved_grams": round(cumulative_gen * 0.4, 4),
             "cost_saved": round(cumulative_gen * 0.0004, 4),
-            "exported_wh": round(exported, 4),
+            "exported_wh": round(exported, 4) if exported is not None else None,
             "ai_status": {
                 "forecast_model": "Online" if has_data else "Offline",
                 "anomaly_model": "Online" if has_data else "Offline",
